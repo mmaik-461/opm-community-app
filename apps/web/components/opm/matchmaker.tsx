@@ -185,7 +185,7 @@ export function Matchmaker() {
             className="min-h-28 resize-none border-0 text-base shadow-none focus-visible:ring-0"
           />
           <div className="mt-3 flex flex-col gap-3 border-t border-zinc-100 pt-3 sm:flex-row sm:items-center sm:justify-between">
-            <DropdownMenu>
+            <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
                 <Button type="button" variant="outline" size="sm" disabled={cities.length === 0}>
                   <MapPin />

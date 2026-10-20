@@ -64,7 +64,7 @@ export function Directory() {
   }
 
   return (
-    <div className="w-full min-w-full space-y-6">
+    <div className="space-y-6">
       <div>
         <p className={labelClass}>Alumni Directory</p>
         <h2 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-900">
@@ -111,14 +111,21 @@ export function Directory() {
             </div>
           </div>
         ))}
-        {active && (
-          <Button variant="ghost" size="sm" onClick={reset}>
+        <div className="h-9">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={reset}
+            className={active ? undefined : 'invisible'}
+            tabIndex={active ? 0 : -1}
+            aria-hidden={!active}
+          >
             <X /> Clear filters
           </Button>
-        )}
+        </div>
       </div>
 
-      <div className="flex min-h-[540px] w-full min-w-full flex-col items-stretch">
+      <div className="relative min-h-[36rem]">
       {loading ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }, (_, i) => (
@@ -126,7 +133,7 @@ export function Directory() {
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="flex w-full min-w-full flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-zinc-200 bg-white p-12 text-center dark:border-zinc-800">
+        <div className="absolute inset-0 flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-200 bg-white p-6 text-center dark:border-zinc-800 dark:bg-zinc-900">
           <UsersRound className="size-8 text-zinc-400" aria-hidden />
           <p className="mt-3 font-semibold text-zinc-900">
             {error || profiles.length === 0 ? 'No alumni available' : 'No alumni match your filters'}

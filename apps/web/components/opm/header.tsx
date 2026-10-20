@@ -46,7 +46,7 @@ export function Header() {
         {loading ? (
           <Skeleton className="h-9 w-32 sm:w-44" />
         ) : (
-          <DropdownMenu>
+          <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="outline"
