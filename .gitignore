@@ -1,6 +1,32 @@
+# Dependencies
 node_modules/
-.env
-.env.local
+.pnpm-store/
+
+# Builds and framework artifacts
+.next/
 dist/
+build/
+out/
 .turbo/
+
+# Environment variables (never commit)
+.env
+.env.*
+!.env.example
+
+# Databases and generators
+# prisma/migrations add, but generated clients — no
+*.sqlite
+*.sqlite-journal
+
+# System files and logs
 .DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Tests and coverage
+coverage/
+.nyc_output/
