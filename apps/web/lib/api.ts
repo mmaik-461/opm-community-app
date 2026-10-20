@@ -1,4 +1,8 @@
 import type {
+  CreateIntroDto,
+  IntroRequestResponse,
+  IntrosResponse,
+  UpdateIntroStatusDto,
   MatchmakingRequest,
   MatchmakingResponse,
   Profile,
@@ -51,4 +55,27 @@ export function fetchMatches(
     },
     signal,
   );
+}
+
+export function fetchIntros(userId: string, signal?: AbortSignal): Promise<IntrosResponse> {
+  return request<IntrosResponse>(`/intros?userId=${encodeURIComponent(userId)}`, undefined, signal);
+}
+
+export function createIntro(body: CreateIntroDto): Promise<IntroRequestResponse> {
+  return request<IntroRequestResponse>('/intros', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
+export function updateIntroStatus(
+  id: string,
+  body: UpdateIntroStatusDto,
+): Promise<IntroRequestResponse> {
+  return request<IntroRequestResponse>(`/intros/${encodeURIComponent(id)}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
 }

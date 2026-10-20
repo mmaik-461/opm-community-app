@@ -13,11 +13,21 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useIntros } from './intros-context';
 import { initials } from './profile-utils';
 import { useUser } from './user-context';
 
 export function Header() {
   const { profiles, currentUser, setCurrentUserId, loading } = useUser();
+  const { pendingIncoming } = useIntros();
+  const introsBadge = pendingIncoming > 0 && (
+    <span
+      className="ml-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold text-white"
+      aria-label={`${pendingIncoming} pending`}
+    >
+      {pendingIncoming}
+    </span>
+  );
 
   return (
     <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/85 backdrop-blur dark:border-zinc-800">
@@ -40,6 +50,10 @@ export function Header() {
           </TabsTrigger>
           <TabsTrigger value="directory" className="px-4">
             Alumni Directory
+          </TabsTrigger>
+          <TabsTrigger value="intros" className="px-4">
+            My Intros
+            {introsBadge}
           </TabsTrigger>
         </TabsList>
 
@@ -89,9 +103,13 @@ export function Header() {
 
       {/* Tabs on small screens */}
       <div className="border-t border-zinc-200 px-4 py-2 md:hidden">
-        <TabsList className="grid h-9 w-full grid-cols-2 bg-zinc-100">
+        <TabsList className="grid h-9 w-full grid-cols-3 bg-zinc-100">
           <TabsTrigger value="matchmaker">AI Matchmaker</TabsTrigger>
           <TabsTrigger value="directory">Alumni Directory</TabsTrigger>
+          <TabsTrigger value="intros">
+            My Intros
+            {introsBadge}
+          </TabsTrigger>
         </TabsList>
       </div>
     </header>

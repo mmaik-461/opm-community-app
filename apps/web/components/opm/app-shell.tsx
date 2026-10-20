@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Directory } from './directory';
 import { Header } from './header';
+import { Intros } from './intros';
+import { IntrosProvider } from './intros-context';
 import { Matchmaker } from './matchmaker';
 import { UserProvider, useUser } from './user-context';
 
@@ -33,6 +35,9 @@ function Content() {
       <TabsContent value="directory">
         <Directory />
       </TabsContent>
+      <TabsContent value="intros">
+        <Intros />
+      </TabsContent>
     </main>
   );
 }
@@ -40,10 +45,12 @@ function Content() {
 export function AppShell() {
   return (
     <UserProvider>
-      <Tabs defaultValue="matchmaker" className="gap-0">
-        <Header />
-        <Content />
-      </Tabs>
+      <IntrosProvider>
+        <Tabs defaultValue="matchmaker" className="gap-0">
+          <Header />
+          <Content />
+        </Tabs>
+      </IntrosProvider>
     </UserProvider>
   );
 }

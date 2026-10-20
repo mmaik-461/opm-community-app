@@ -269,7 +269,7 @@ export function Matchmaker() {
             </p>
             <div className="flex w-full flex-col gap-4">
               {matches.map((m, i) => (
-                <MatchCard key={m.profile?.id ?? i} match={m} rank={i + 1} />
+                <MatchCard key={m.profile?.id ?? i} match={m} rank={i + 1} query={searched} />
               ))}
             </div>
           </div>

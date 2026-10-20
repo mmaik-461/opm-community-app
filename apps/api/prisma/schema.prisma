@@ -14,22 +14,46 @@ enum TravelStatus {
   TRAVELING_TO
 }
 
+enum IntroStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
 model Profile {
-  id           String                      @id @default(uuid())
-  fullName     String
-  headline     String
-  bio          String
-  city         String
-  travelStatus TravelStatus                @default(LIVING_IN)
-  cohort       String
-  industry     String
-  skills       String[]
-  avatarUrl    String?
-  linkedinUrl  String?
-  email        String?                     @unique
-  embedding    Unsupported("vector(1536)")?
-  createdAt    DateTime                    @default(now())
-  updatedAt    DateTime                    @updatedAt
+  id             String                       @id @default(uuid())
+  fullName       String
+  headline       String
+  bio            String
+  city           String
+  travelStatus   TravelStatus                 @default(LIVING_IN)
+  cohort         String
+  industry       String
+  skills         String[]
+  avatarUrl      String?
+  linkedinUrl    String?
+  email          String?                      @unique
+  embedding      Unsupported("vector(1536)")?
+  createdAt      DateTime                     @default(now())
+  updatedAt      DateTime                     @updatedAt
+  sentIntros     IntroRequest[]               @relation("SentIntros")
+  receivedIntros IntroRequest[]               @relation("ReceivedIntros")
 
   @@index([city])
+}
+
+model IntroRequest {
+  id          String      @id @default(cuid())
+  requesterId String
+  requester   Profile     @relation("SentIntros", fields: [requesterId], references: [id], onDelete: Cascade)
+  targetId    String
+  target      Profile     @relation("ReceivedIntros", fields: [targetId], references: [id], onDelete: Cascade)
+  query       String
+  icebreaker  String
+  status      IntroStatus @default(PENDING)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([requesterId])
+  @@index([targetId, status])
 }

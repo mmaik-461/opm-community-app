@@ -1,13 +1,15 @@
 'use client';
 
 import * as React from 'react';
-import { Check, Copy, ExternalLink, Lightbulb, Handshake, Mail, MapPin, Sparkles } from 'lucide-react';
+import { Check, Copy, ExternalLink, Lightbulb, Handshake, Mail, MapPin, Send, Sparkles } from 'lucide-react';
 import type { MatchResult } from '@opm/shared-types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { initials, labelClass, travelLabel } from './profile-utils';
+import { RequestIntroDialog } from './request-intro-dialog';
+import { useUser } from './user-context';
 
 function toPercent(score: number): number {
   const pct = score <= 1 ? score * 100 : score;
@@ -61,8 +63,12 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-export function MatchCard({ match, rank }: { match: MatchResult; rank: number }) {
+export function MatchCard({ match, rank, query }: { match: MatchResult; rank: number; query: string }) {
   const { profile } = match;
+  const { currentUser } = useUser();
+  const [dialogOpen, setDialogOpen] = React.useState(false);
+  const [requested, setRequested] = React.useState(false);
+  const isSelf = currentUser?.id === profile.id;
   const pct = toPercent(match.similarityScore);
   const linkedin = safeHttpUrl(profile.linkedinUrl);
   const mailto = profile.email
@@ -123,16 +129,25 @@ export function MatchCard({ match, rank }: { match: MatchResult; rank: number })
           <p className={`${labelClass} flex items-center gap-1.5`}>
             <Lightbulb className="size-3.5" aria-hidden /> Suggested icebreaker
           </p>
-          <CopyButton text={match.suggestedIcebreaker} />
         </div>
         <blockquote className="border-l-2 border-zinc-900 bg-zinc-50 py-3 pr-4 pl-4 text-sm leading-relaxed text-zinc-700 italic">
           {match.suggestedIcebreaker}
         </blockquote>
       </div>
 
-      {(mailto || linkedin) && (
-        <div className="flex flex-wrap gap-2">
-          {mailto && (
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          size="sm"
+          disabled={requested || isSelf || !currentUser}
+          onClick={() => setDialogOpen(true)}
+          className="bg-zinc-900 text-white hover:bg-zinc-800"
+        >
+          {requested ? <Check /> : <Send />}
+          {requested ? 'Intro Requested' : 'Request Intro'}
+        </Button>
+        <CopyButton text={match.suggestedIcebreaker} />
+        {mailto && (
             <Button asChild variant="outline" size="sm">
               <a href={mailto}>
                 <Mail /> Email
@@ -146,8 +161,15 @@ export function MatchCard({ match, rank }: { match: MatchResult; rank: number })
               </a>
             </Button>
           )}
-        </div>
-      )}
+      </div>
+      <RequestIntroDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        target={profile}
+        query={query}
+        icebreaker={match.suggestedIcebreaker}
+        onSent={() => setRequested(true)}
+      />
     </Card>
   );
 }

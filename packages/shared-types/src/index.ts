@@ -39,3 +39,42 @@ export interface ProfileFilters {
   cohort?: string;
   industry?: string;
 }
+
+export type IntroStatus = 'PENDING' | 'ACCEPTED' | 'DECLINED';
+
+export const IntroStatus = {
+  PENDING: 'PENDING',
+  ACCEPTED: 'ACCEPTED',
+  DECLINED: 'DECLINED',
+} as const satisfies Record<IntroStatus, IntroStatus>;
+
+export interface CreateIntroDto {
+  requesterId: string;
+  targetId: string;
+  query: string;
+  icebreaker: string;
+}
+
+export interface UpdateIntroStatusDto {
+  /** The acting user; must be the intro's target. */
+  userId: string;
+  status: 'ACCEPTED' | 'DECLINED';
+}
+
+export interface IntroRequestResponse {
+  id: string;
+  requesterId: string;
+  requester: Profile;
+  targetId: string;
+  target: Profile;
+  query: string;
+  icebreaker: string;
+  status: IntroStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IntrosResponse {
+  sent: IntroRequestResponse[];
+  received: IntroRequestResponse[];
+}

@@ -1,0 +1,231 @@
+'use client';
+
+import * as React from 'react';
+import { AlertTriangle, Check, Inbox, Loader2, Send, X } from 'lucide-react';
+import type { IntroRequestResponse, IntroStatus, Profile } from '@opm/shared-types';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { updateIntroStatus } from '@/lib/api';
+import { useIntros } from './intros-context';
+import { initials, labelClass } from './profile-utils';
+import { useUser } from './user-context';
+
+type View = 'received' | 'sent';
+
+const STATUS_STYLE: Record<IntroStatus, string> = {
+  PENDING: 'border-amber-200 bg-amber-50 text-amber-800',
+  ACCEPTED: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+  DECLINED: 'border-zinc-200 bg-zinc-100 text-zinc-600',
+};
+
+const STATUS_LABEL: Record<IntroStatus, string> = {
+  PENDING: 'Pending',
+  ACCEPTED: 'Accepted',
+  DECLINED: 'Declined',
+};
+
+function StatusBadge({ status }: { status: IntroStatus }) {
+  return (
+    <Badge variant="outline" className={STATUS_STYLE[status]}>
+      {STATUS_LABEL[status]}
+    </Badge>
+  );
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function IntroCard({
+  intro,
+  counterpart,
+  direction,
+}: {
+  intro: IntroRequestResponse;
+  counterpart: Profile;
+  direction: View;
+}) {
+  const { currentUser } = useUser();
+  const { refresh } = useIntros();
+  const [busy, setBusy] = React.useState<'ACCEPTED' | 'DECLINED' | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
+
+  async function decide(status: 'ACCEPTED' | 'DECLINED') {
+    if (!currentUser) return;
+    setBusy(status);
+    setError(null);
+    try {
+      await updateIntroStatus(intro.id, { userId: currentUser.id, status });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not update the intro');
+    } finally {
+      setBusy(null);
+      refresh();
+    }
+  }
+
+  return (
+    <Card className="gap-4 border border-zinc-200 bg-white p-5 shadow-none ring-0">
+      <div className="flex items-start gap-4">
+        <Avatar className="size-11">
+          {counterpart.avatarUrl && <AvatarImage src={counterpart.avatarUrl} alt="" />}
+          <AvatarFallback className="bg-zinc-900 text-sm font-medium text-white">
+            {initials(counterpart.fullName)}
+          </AvatarFallback>
+        </Avatar>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <h3 className="font-semibold tracking-tight text-zinc-900">{counterpart.fullName}</h3>
+            <Badge variant="outline" className="border-zinc-300 text-zinc-700">
+              {counterpart.cohort}
+            </Badge>
+          </div>
+          <p className="text-sm text-zinc-600">{counterpart.headline}</p>
+          <p className="mt-1 text-xs text-zinc-500">
+            {direction === 'received' ? 'Received' : 'Sent'} {formatDate(intro.createdAt)}
+          </p>
+        </div>
+        {direction === 'sent' && <StatusBadge status={intro.status} />}
+        {direction === 'received' && intro.status !== 'PENDING' && (
+          <StatusBadge status={intro.status} />
+        )}
+      </div>
+
+      <div>
+        <p className={`${labelClass} mb-1.5`}>Looking for</p>
+        <p className="text-sm text-zinc-700 break-words">{intro.query}</p>
+      </div>
+
+      <blockquote className="border-l-2 border-zinc-900 bg-zinc-50 py-3 pr-4 pl-4 text-sm leading-relaxed whitespace-pre-line text-zinc-700 italic break-words">
+        {intro.icebreaker}
+      </blockquote>
+
+      {error && (
+        <p role="alert" className="flex items-start gap-2 text-sm text-red-700">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden /> {error}
+        </p>
+      )}
+
+      {direction === 'received' && intro.status === 'PENDING' && (
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            disabled={busy !== null}
+            onClick={() => void decide('ACCEPTED')}
+            className="bg-emerald-600 text-white hover:bg-emerald-700"
+          >
+            {busy === 'ACCEPTED' ? <Loader2 className="animate-spin" /> : <Check />} Accept
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={busy !== null}
+            onClick={() => void decide('DECLINED')}
+          >
+            {busy === 'DECLINED' ? <Loader2 className="animate-spin" /> : <X />} Decline
+          </Button>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function Empty({ view }: { view: View }) {
+  const Icon = view === 'received' ? Inbox : Send;
+  return (
+    <div className="flex flex-col items-center rounded-xl border border-dashed border-zinc-300 bg-white px-6 py-12 text-center">
+      <Icon className="size-8 text-zinc-400" aria-hidden />
+      <p className="mt-3 font-semibold text-zinc-900">
+        {view === 'received' ? 'No intro requests yet' : 'You haven’t requested any intros'}
+      </p>
+      <p className="mt-1 text-sm text-zinc-600">
+        {view === 'received'
+          ? 'When someone asks to connect with you, it will show up here.'
+          : 'Use “Request Intro” on an AI Matchmaker result to get started.'}
+      </p>
+    </div>
+  );
+}
+
+export function Intros() {
+  const { currentUser } = useUser();
+  const { sent, received, pendingIncoming, loading, error, refresh } = useIntros();
+  const [view, setView] = React.useState<View>('received');
+
+  const list = view === 'received' ? received : sent;
+
+  const tabs: { id: View; label: string; count?: number }[] = [
+    { id: 'received', label: 'Received', count: pendingIncoming },
+    { id: 'sent', label: 'Sent' },
+  ];
+
+  return (
+    <div className="mx-auto max-w-3xl space-y-6">
+      <section className="text-center">
+        <p className={labelClass}>My Intros</p>
+        <h2 className="mt-2 text-3xl font-semibold tracking-tight text-zinc-900">Your introductions</h2>
+        {currentUser && (
+          <p className="mt-2 text-sm text-zinc-600">Showing intros for {currentUser.fullName}.</p>
+        )}
+      </section>
+
+      <div role="tablist" aria-label="Intro direction" className="mx-auto flex w-fit gap-1 rounded-lg bg-zinc-100 p-[3px]">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            role="tab"
+            type="button"
+            aria-selected={view === t.id}
+            onClick={() => setView(t.id)}
+            className={`inline-flex h-8 items-center gap-2 rounded-md px-4 text-sm font-medium transition-colors ${
+              view === t.id ? 'bg-white text-zinc-900 shadow-sm' : 'text-zinc-600 hover:text-zinc-900'
+            }`}
+          >
+            {t.label}
+            <span className="text-xs text-zinc-500">
+              {t.id === 'received' ? received.length : sent.length}
+            </span>
+            {t.count ? (
+              <span className="rounded-full bg-red-600 px-1.5 text-[10px] font-semibold text-white">
+                {t.count} new
+              </span>
+            ) : null}
+          </button>
+        ))}
+      </div>
+
+      {error && (
+        <div role="alert" className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+          <AlertTriangle className="size-5 shrink-0 text-red-600" aria-hidden />
+          <span className="flex-1">{error}</span>
+          <Button variant="outline" size="sm" onClick={refresh}>
+            Retry
+          </Button>
+        </div>
+      )}
+
+      {loading && list.length === 0 ? (
+        <div className="space-y-4">
+          <Skeleton className="h-40 w-full" />
+          <Skeleton className="h-40 w-full" />
+        </div>
+      ) : list.length === 0 && !error ? (
+        <Empty view={view} />
+      ) : (
+        <div className="flex flex-col gap-4">
+          {list.map((i) => (
+            <IntroCard
+              key={i.id}
+              intro={i}
+              direction={view}
+              counterpart={view === 'received' ? i.requester : i.target}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
