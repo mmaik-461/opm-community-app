@@ -1,6 +1,6 @@
 import { vi } from 'vitest';
 
-type Handler = (req: { url: URL; method: string; body: unknown }) => unknown;
+export type Handler = (req: { url: URL; method: string; body: unknown }) => unknown;
 
 /**
  * Stubs global fetch with a router keyed by "METHOD /path". Components run their real

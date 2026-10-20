@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { stubApi } from '@/test/api-fake';
+import { stubApi, type Handler } from '@/test/api-fake';
 import { emptyIntros, makeIntro, makeProfile } from '@/test/fixtures';
 import { renderWithProviders } from '@/test/render';
 import { useUser } from './user-context';
@@ -38,10 +38,10 @@ describe('Intros acting-user switch', () => {
     const user = userEvent.setup();
     stubApi({
       'GET /profiles': [alice, bob],
-      'GET /intros': ({ url }) =>
+      'GET /intros': (({ url }) =>
         url.searchParams.get('userId') === 'bob'
           ? { ...emptyIntros(), received: page([receivedIntro]), pendingIncoming: 1 }
-          : { ...emptyIntros(), sent: page([sentIntro]) },
+          : { ...emptyIntros(), sent: page([sentIntro]) }) satisfies Handler,
     });
     renderWithProviders(
       <>

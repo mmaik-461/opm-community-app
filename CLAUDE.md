@@ -79,6 +79,10 @@ Always execute commands using pnpm filters from the monorepo root:
 
 - Run `typecheck` and `lint` on modified packages before finalizing any feature.
 - Verification: `pnpm format`, `pnpm lint` (use `pnpm lint:fix` for autofixable issues) and the shared-types/api/web builds must pass with zero errors.
+- **Git hooks (Husky + lint-staged, installed by `pnpm install` via `prepare`):**
+  - `pre-commit` (fast): `pnpm lint-staged` (`eslint --fix` + `prettier --write` on staged JS/TS/TSX; `prettier --write` on staged JSON/MD/CSS), then `pnpm typecheck`.
+  - `pre-push` (comprehensive): `pnpm test` then `pnpm build`.
+  - Never bypass hooks with `--no-verify`; fix the failure instead.
 - Ensure the seed script generates 20-30 realistic alumni profiles with precalculated embeddings.
 
 ## Code Style & Architecture Guidelines

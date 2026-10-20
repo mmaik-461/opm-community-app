@@ -113,6 +113,8 @@ The frontend reads the API from `NEXT_PUBLIC_API_URL` (default `http://localhost
 
 **Seed embeddings:** with `OPENAI_API_KEY` set, the seed stores real `text-embedding-3-small` vectors. Without it, it falls back to a deterministic hashed bag-of-words vector (same 1536 dims) so the database is always populated. Query embeddings come from OpenAI, so seed with `OPENAI_API_KEY` set for semantically comparable vectors.
 
+**Git hooks (Husky):** enabled automatically by `pnpm install` (the root `prepare` script). `pre-commit` runs `lint-staged` (ESLint `--fix` + Prettier on staged code, Prettier on JSON/MD/CSS) and `pnpm typecheck`; `pre-push` runs `pnpm test` and `pnpm build`.
+
 Quality gates: `pnpm --filter web typecheck`, `pnpm --filter api typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build`, `pnpm test` and (for user-facing changes) `pnpm test:e2e`.
 
 The API reads `WEB_ORIGIN` (default `http://localhost:3000`) for its CORS allow-list; the web build reads `NEXT_DIST_DIR` (default `.next`) so the e2e build never clobbers a running dev server.
