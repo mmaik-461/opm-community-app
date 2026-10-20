@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { stubApi, type Handler } from '@/test/api-fake';
 import { emptyIntros, makeIntro, makeProfile } from '@/test/fixtures';
+import { testAccessToken } from '@/test/next-auth';
 import { renderWithProviders } from '@/test/render';
 import { useUser } from './user-context';
 import { Intros } from './intros';
@@ -38,8 +39,8 @@ describe('Intros acting-user switch', () => {
     const user = userEvent.setup();
     stubApi({
       'GET /profiles': [alice, bob],
-      'GET /intros': (({ url }) =>
-        url.searchParams.get('userId') === 'bob'
+      'GET /intros': (({ headers }) =>
+        headers.get('Authorization') === `Bearer ${testAccessToken('bob')}`
           ? { ...emptyIntros(), received: page([receivedIntro]), pendingIncoming: 1 }
           : { ...emptyIntros(), sent: page([sentIntro]) }) satisfies Handler,
     });

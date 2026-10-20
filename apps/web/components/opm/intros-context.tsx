@@ -44,7 +44,7 @@ export function IntrosProvider({ children }: { children: React.ReactNode }) {
     const controller = new AbortController();
     setLoading(true);
     setError(null);
-    fetchIntros(userId, { receivedPage, sentPage }, controller.signal)
+    fetchIntros({ receivedPage, sentPage }, controller.signal)
       .then((res) => {
         // A page past the end (e.g. data shrank) snaps back to the last page.
         if (res.received.data.length === 0 && receivedPage > res.received.meta.totalPages) {

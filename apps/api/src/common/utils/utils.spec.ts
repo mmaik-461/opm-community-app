@@ -2,7 +2,9 @@ import { BadRequestException, ServiceUnavailableException } from '@nestjs/common
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../pipes/zod-validation.pipe';
+import { extractBearerToken, getAuthSecret, isDevLoginEnabled } from './auth';
 import { requireEnvKey } from './env';
+import { hashPassword, verifyPassword } from './password';
 import { buildPaginationMeta, pageOffset } from './pagination';
 import { equalsInsensitive } from './prisma';
 import { dataTag, travelContextTag } from './prompt';
@@ -116,5 +118,50 @@ describe('ZodValidationPipe', () => {
       expect(messages.message.some((m) => m.startsWith('name:'))).toBe(true);
       expect(messages.message.some((m) => m.startsWith('age:'))).toBe(true);
     }
+  });
+});
+
+describe('auth helpers', () => {
+  it.each([
+    ['Bearer abc.def', 'abc.def'],
+    ['bearer   abc', 'abc'],
+    ['Bearer', null],
+    ['Basic abc', null],
+    ['Bearer a b', null],
+    ['', null],
+    [undefined, null],
+  ])('extractBearerToken(%j) -> %j', (header, token) => {
+    expect(extractBearerToken(header)).toBe(token);
+  });
+
+  it('getAuthSecret requires a long enough secret', () => {
+    expect(() => getAuthSecret({})).toThrow(ServiceUnavailableException);
+    expect(() => getAuthSecret({ AUTH_SECRET: 'short' })).toThrow(ServiceUnavailableException);
+    expect(getAuthSecret({ AUTH_SECRET: 'x'.repeat(32) })).toHaveLength(32);
+  });
+
+  it.each([
+    [{ NODE_ENV: 'development' }, true],
+    [{}, true],
+    [{ NODE_ENV: 'production' }, false],
+    [{ NODE_ENV: 'production', AUTH_DEV_LOGIN: 'false' }, false],
+    [{ NODE_ENV: 'production', AUTH_DEV_LOGIN: 'true' }, true],
+  ])('isDevLoginEnabled(%j) -> %s', (env, enabled) => {
+    expect(isDevLoginEnabled(env as NodeJS.ProcessEnv)).toBe(enabled);
+  });
+});
+
+describe('password hashing', () => {
+  it('verifies the right password and rejects others', async () => {
+    const hash = await hashPassword('s3cret');
+    expect(hash).toMatch(/^scrypt\$[0-9a-f]+\$[0-9a-f]+$/);
+    expect(await verifyPassword('s3cret', hash)).toBe(true);
+    expect(await verifyPassword('S3cret', hash)).toBe(false);
+  });
+
+  it('salts every hash and rejects malformed stored values', async () => {
+    expect(await hashPassword('same')).not.toBe(await hashPassword('same'));
+    expect(await verifyPassword('x', 'plaintext')).toBe(false);
+    expect(await verifyPassword('x', 'bcrypt$aa$bb')).toBe(false);
   });
 });

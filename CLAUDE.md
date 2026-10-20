@@ -16,6 +16,10 @@ Production-grade platform for the OPM alumni community: "Ask Community + AI Matc
   - `packages/tsconfig`: Shared TS configs
 - Language: TypeScript (strict mode throughout)
 
+## Environment Variables (auth)
+
+- `AUTH_SECRET` (≥ 32 chars; identical in `apps/api` and `apps/web`), `NEXTAUTH_URL` (web, production), `AUTH_DEV_LOGIN` (api) / `NEXT_PUBLIC_AUTH_DEV_LOGIN` (web), `SEED_PASSWORD` (seed only), `API_URL` (optional web server-side API origin). See `.env.example` and the README "Authentication" section.
+
 ## Key Development Commands
 
 Always execute commands using pnpm filters from the monorepo root:
@@ -42,7 +46,8 @@ Always execute commands using pnpm filters from the monorepo root:
 
 1. **Scope Boundaries:**
    - Conversations continue on external channels (LinkedIn / WhatsApp / Email); the platform owns discovery, AI icebreaker generation and intro-request tracking. No real-time chat/WebSockets.
-   - Identity is provided by the frontend acting-as user switcher; the selected `currentUserId` is sent with matchmaking and intro requests.
+   - Identity comes from the authenticated session, never from a payload. `apps/web` uses NextAuth (JWT session) and signs a short-lived HS256 access token (`sub` = profile id, secret `AUTH_SECRET` shared with the API); `lib/api.ts` sends it as `Authorization: Bearer`. `apps/api` has a global `AuthGuard` (opt out with `@Public()`); controllers read the user with `@CurrentUser()` and pass `user.id` to services. Never add `userId` / `requesterId` / `currentUserId` to request DTOs.
+   - Development quick login (`dev-impersonate` provider, `/auth/dev/*`, header switcher) is on when `NODE_ENV !== 'production'` or `AUTH_DEV_LOGIN=true` (API) / `NEXT_PUBLIC_AUTH_DEV_LOGIN=true` (web); keep it gated on both sides. Standard sign-in is email + password (`Profile.passwordHash`, scrypt).
    - Location is modelled as city chips and a status ("Living in" / "Traveling to"); no GIS or map dependencies.
 2. **AI & Vector Search:**
    - Reasoning & Generation: Anthropic Claude via `@anthropic-ai/sdk` (default `claude-sonnet-5-5`, override with `ANTHROPIC_MODEL`).
@@ -70,9 +75,9 @@ Always execute commands using pnpm filters from the monorepo root:
 - **README is a deliverable.** On every functional change, review `README.md`. If API routes, CLI commands, architecture, test setup or features change, `README.md` MUST be updated within the same task.
 - **Test real contracts, not mocks.** Assert observable behaviour (status codes, persisted state, rendered output, request payloads, SQL predicates and bound parameters), not a single hard-coded return value stubbed to make an assertion pass. Mock only true external boundaries (OpenAI/Anthropic SDKs, `fetch`, the browser network) and keep those fakes behaviour-faithful (see `apps/api/src/test/fake-prisma.ts`).
 - **Layout and tooling.**
-  - API: Vitest + SWC (decorator metadata) + Supertest; specs live next to the code as `*.spec.ts`; shared fixtures/fakes in `apps/api/src/test/`.
-  - Web: Vitest + jsdom + Testing Library; specs live next to the code as `*.test.ts(x)`; shared fixtures, fetch fake and render helper in `apps/web/test/`.
-  - E2E: Playwright in `apps/e2e` (`tests/`, `utils/`, `constants.ts`). Use resilient, user-facing locators (`getByRole`, `getByText`, `getByLabel`), never CSS or DOM-structure selectors. Journeys that write data use distinct alumni because the e2e database is shared per run.
+  - API: Vitest + SWC (decorator metadata) + Supertest; specs live next to the code as `*.spec.ts`; shared fixtures/fakes in `apps/api/src/test/`. Endpoint specs register the real `AuthGuard` and call with signed tokens (`bearer(userId)` from `src/test/auth.ts`).
+  - Web: Vitest + jsdom + Testing Library; specs live next to the code as `*.test.ts(x)`; shared fixtures, fetch fake and render helper in `apps/web/test/`. NextAuth's browser client is mocked globally (`test/next-auth.ts`); `renderWithProviders` signs in as `currentUserId`.
+  - E2E: Playwright in `apps/e2e` (`tests/`, `utils/`, `constants.ts`). Sign in via `openApp` (dev quick login). Use resilient, user-facing locators (`getByRole`, `getByText`, `getByLabel`), never CSS or DOM-structure selectors. Journeys that write data use distinct alumni because the e2e database is shared per run.
   - Tests follow the same rules as production code: constants and helpers are shared, not duplicated.
 
 ## Testing & Quality Gate

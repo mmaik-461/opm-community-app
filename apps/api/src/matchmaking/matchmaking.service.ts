@@ -36,9 +36,9 @@ export class MatchmakingService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async match(req: MatchmakingRequest): Promise<MatchmakingResponse> {
-    const requester = await this.findRequester(req.currentUserId);
-    const candidates = await this.findCandidates(req, requester);
+  async match(userId: string, req: MatchmakingRequest): Promise<MatchmakingResponse> {
+    const requester = await this.findRequester(userId);
+    const candidates = await this.findCandidates(userId, req, requester);
     if (candidates.length === 0) return { matches: [] };
 
     const picks = await this.rankWithClaude(req, candidates, requester);
@@ -62,8 +62,7 @@ export class MatchmakingService {
     return { matches };
   }
 
-  private async findRequester(id?: string) {
-    if (!id) return null;
+  private async findRequester(id: string) {
     return this.prisma.profile.findUnique({
       where: { id },
       select: REQUESTER_CONTEXT_SELECT,
@@ -72,11 +71,12 @@ export class MatchmakingService {
 
   // Step 1: embed the query, then pgvector cosine-distance top-N.
   private async findCandidates(
+    userId: string,
     req: MatchmakingRequest,
     requester: Awaited<ReturnType<MatchmakingService['findRequester']>>,
   ): Promise<Candidate[]> {
     const vector = toVectorLiteral(await this.embed(this.effectiveQuery(req, requester)));
-    const exclude = req.currentUserId ? Prisma.sql`AND "id" <> ${req.currentUserId}` : Prisma.empty;
+    const exclude = Prisma.sql`AND "id" <> ${userId}`;
     const cityFilter = req.travelContext
       ? Prisma.sql`AND lower("city") = lower(${req.travelContext.city})`
       : Prisma.empty;

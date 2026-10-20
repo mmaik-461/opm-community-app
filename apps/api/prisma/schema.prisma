@@ -33,6 +33,8 @@ model Profile {
   avatarUrl      String?
   linkedinUrl    String?
   email          String?                      @unique
+  /// scrypt hash (`scrypt$salt$key`); null disables password sign-in for the profile.
+  passwordHash   String?
   embedding      Unsupported("vector(1536)")?
   createdAt      DateTime                     @default(now())
   updatedAt      DateTime                     @updatedAt

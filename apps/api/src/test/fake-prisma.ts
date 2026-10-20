@@ -29,7 +29,18 @@ function matches(row: Row, where: Where = {}): boolean {
  * It applies where/orderBy/skip/take for real, so tests assert behaviour against data
  * instead of against canned return values.
  */
-export function createFakePrisma(profiles: Profile[]) {
+export type StoredProfile = Profile & { passwordHash?: string | null };
+
+function applySelect<T extends Row>(row: T, select?: Record<string, boolean>): Row {
+  if (!select) return row;
+  return Object.fromEntries(
+    Object.keys(select)
+      .filter((k) => select[k])
+      .map((k) => [k, row[k]]),
+  );
+}
+
+export function createFakePrisma(profiles: StoredProfile[]) {
   const intros: StoredIntro[] = [];
   let clock = Date.UTC(2026, 0, 1);
   let seq = 0;
@@ -83,8 +94,29 @@ export function createFakePrisma(profiles: Profile[]) {
   };
 
   const profile = {
-    findMany: async ({ where }: { where: Where }) =>
-      profiles.filter((p) => matches(p as unknown as Row, where)).map(({ id }) => ({ id })),
+    findMany: async ({
+      where,
+      select,
+      orderBy,
+    }: {
+      where?: Where;
+      select?: Record<string, boolean>;
+      orderBy?: { fullName: 'asc' };
+    } = {}) => {
+      const hits = profiles.filter((p) => matches(p as unknown as Row, where));
+      if (orderBy) hits.sort((a, b) => a.fullName.localeCompare(b.fullName));
+      return hits.map((p) => applySelect(p as unknown as Row, select ?? { id: true }));
+    },
+    findUnique: async ({
+      where,
+      select,
+    }: {
+      where: { id?: string; email?: string };
+      select?: Record<string, boolean>;
+    }) => {
+      const hit = profiles.find((p) => matches(p as unknown as Row, where));
+      return hit ? applySelect(hit as unknown as Row, select) : null;
+    },
   };
 
   return { introRequest, profile, intros };

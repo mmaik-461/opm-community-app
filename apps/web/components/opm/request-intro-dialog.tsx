@@ -62,7 +62,6 @@ export function RequestIntroDialog({
     setError(null);
     try {
       await createIntro({
-        requesterId: currentUser.id,
         targetId: target.id,
         query,
         icebreaker: message.trim(),

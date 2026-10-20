@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { emptyIntros, makeMatch, makeProfile } from '@/test/fixtures';
 import { jsonError, stubApi } from '@/test/api-fake';
+import { testAccessToken } from '@/test/next-auth';
 import { renderWithProviders } from '@/test/render';
 import { MatchCard } from './match-card';
 
@@ -119,8 +120,10 @@ describe('MatchCard', () => {
         expect(screen.getByRole('button', { name: /intro requested/i })).toBeDisabled(),
       );
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-      expect(api.calls.find((c) => c.method === 'POST')?.body).toEqual({
-        requesterId: 'me',
+      const post = api.calls.find((c) => c.method === 'POST');
+      // The requester is the authenticated user, so it is never part of the payload.
+      expect(post?.headers.get('Authorization')).toBe(`Bearer ${testAccessToken('me')}`);
+      expect(post?.body).toEqual({
         targetId: 'p1',
         query: 'Series A',
         icebreaker: 'Hi Anna, I would love to hear how you raised your Series A.',

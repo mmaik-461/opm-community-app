@@ -34,13 +34,38 @@ Shared request/response contracts live in `packages/shared-types` and are used b
 
 ### API surface
 
-| Route                      | Purpose                                                                                                                                                  |
-| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /profiles`            | Alumni directory (filters: `city`, `cohort`, `industry`).                                                                                                |
-| `POST /matchmaking`        | `{ query, currentUserId?, targetCity?, travelContext?: { city, dates? } }` → top 3 `MatchResult`. `query` may be empty only when `travelContext` is set. |
-| `POST /intros`             | Create an intro request (`PENDING`). `400` for self-requests, `409` for a duplicate pending request.                                                     |
-| `GET /intros`              | Sent and received intros for a user: `PaginatedIntros` per direction (`receivedPage`, `sentPage`, `limit`) plus `pendingIncoming` for the header badge.  |
-| `PATCH /intros/:id/status` | Target accepts or declines. `409` if already answered.                                                                                                   |
+| Route                                                                                                                                                                                                             | Purpose |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| Every route requires `Authorization: Bearer <access token>` (`401` otherwise) except `GET /health` and `/auth/*`. The acting user is always the token's subject; it is never read from a payload or query string. |
+
+| Route                      | Purpose                                                                                                                                                      |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `POST /auth/login`         | Public. `{ email, password }` → `{ profile }`; `401` for any bad credential (same message for unknown email, wrong password, no password set).               |
+| `GET /auth/dev/profiles`   | Public, **dev login only** (`404` in production unless `AUTH_DEV_LOGIN=true`): the quick-login list.                                                         |
+| `POST /auth/dev/login`     | Public, **dev login only**: `{ profileId }` → `{ profile }`.                                                                                                 |
+| `GET /profiles`            | Alumni directory (filters: `city`, `cohort`, `industry`).                                                                                                    |
+| `POST /matchmaking`        | `{ query, targetCity?, travelContext?: { city, dates? } }` → top 3 `MatchResult` for the authenticated user. `query` may be empty only with `travelContext`. |
+| `POST /intros`             | `{ targetId, query, icebreaker }` → intro request from the authenticated user (`PENDING`). `400` for self-requests, `409` for a duplicate pending request.   |
+| `GET /intros`              | The authenticated user's sent and received intros: `PaginatedIntros` per direction (`receivedPage`, `sentPage`, `limit`) plus `pendingIncoming`.             |
+| `PATCH /intros/:id/status` | `{ status }`. Only the intro's target (the authenticated user) may accept or decline; `403` otherwise, `409` if already answered.                            |
+
+### Authentication
+
+```
+Browser ──► apps/web (NextAuth, JWT session cookie)
+              │  authorize(): POST /auth/login or /auth/dev/login  ──►  apps/api checks the credential
+              │  session callback: signs a 5-minute HS256 access token { sub: profileId } with AUTH_SECRET
+Browser ──► lib/api.ts reads the session before each call and sends  Authorization: Bearer <token>
+        ──► apps/api AuthGuard (global): verifies signature + expiry, sets req.user = { id: sub }
+```
+
+- **Standard sign-in:** email + password. `Profile.passwordHash` stores a salted scrypt hash (null disables password sign-in for that profile). `prisma db seed` sets it for every seeded alumnus only when `SEED_PASSWORD` is provided.
+- **Dev impersonation / quick login:** a second NextAuth provider (`dev-impersonate`) lists seeded alumni on the sign-in screen and powers the header "Acting as" switcher (it signs in again as the chosen user). It is on when `NODE_ENV !== 'production'`, or in production only when `AUTH_DEV_LOGIN=true` (API) / `NEXT_PUBLIC_AUTH_DEV_LOGIN=true` (web) are set. Both apps check the flag independently; with it off the API answers `404` and the header shows the signed-in user plus **Sign out**.
+- **Server side:** `AuthGuard` is registered globally (`APP_GUARD`); routes opt out with `@Public()`. Controllers receive the user via `@CurrentUser()`. Only HS256 tokens signed with `AUTH_SECRET` are accepted (`alg: none` and foreign secrets are rejected); a missing or short secret yields `503`, not `401`.
+- **Environment:** `AUTH_SECRET` (≥ 32 chars, identical for web and API), `NEXTAUTH_URL` (web, required in production), `AUTH_DEV_LOGIN` / `NEXT_PUBLIC_AUTH_DEV_LOGIN`, `SEED_PASSWORD`, and optionally `API_URL` (web server-side calls; defaults to `NEXT_PUBLIC_API_URL`). See `.env.example`.
+- **Not included:** rate limiting / lockout on `POST /auth/login`, password reset and sign-up. Put the API behind a gateway that rate-limits before exposing password sign-in publicly.
+
+> Production checklist: strong unique `AUTH_SECRET`, `NODE_ENV=production`, `NEXTAUTH_URL` set, dev-login flags unset, `SEED_PASSWORD` not used for real data.
 
 ### Data model
 
@@ -54,7 +79,7 @@ IntroRequest { id, requesterId, targetId, query, icebreaker,
 indexes: (requesterId), (targetId, status)
 ```
 
-`Profile` also carries a pgvector `embedding` column used for retrieval.
+`Profile` also carries a pgvector `embedding` column used for retrieval, and an optional `passwordHash` (scrypt) for email/password sign-in; neither is ever returned by the API.
 
 ## Tech stack
 
@@ -73,12 +98,15 @@ apps/web                Next.js frontend
   components/opm        Feature components (JSX and component state only)
   constants/            Static options, copy, class tokens and limits
   utils/                Pure helper functions
-  lib/                  API client and shadcn `cn` helper
+  lib/                  API client (attaches the bearer token), NextAuth config, shadcn `cn` helper
+  app/api/auth          NextAuth route handler
 apps/e2e                Playwright end-to-end journeys (own API + web servers, isolated database)
-apps/api                NestJS backend (profiles, matchmaking, intros modules)
+apps/api                NestJS backend (auth, profiles, matchmaking, intros modules)
   src/common/constants  Limits, prompts, Prisma selects
   src/common/utils      Shared helpers (pagination, prompt tags, vectors, env)
   src/common/pipes      Zod validation pipe
+  src/common/guards     Global AuthGuard (bearer token verification)
+  src/common/decorators @Public() and @CurrentUser()
 packages/shared-types   DTOs and API contracts
 packages/tsconfig       Shared TypeScript configs
 ```
@@ -99,6 +127,9 @@ docker compose up -d
 #    OPENAI_API_KEY=...         (required for query embeddings; used by the seed when present)
 #    PORT=4000
 #    ANTHROPIC_MODEL=...        (optional override)
+#    AUTH_SECRET=...            (required, >= 32 chars; the SAME value in apps/web/.env.local)
+#    SEED_PASSWORD=...          (optional: enables email/password sign-in for seeded alumni)
+#    apps/web/.env.local: AUTH_SECRET=..., NEXTAUTH_URL=http://localhost:3000
 
 # 3. Schema and data
 pnpm --filter api prisma generate
@@ -109,7 +140,7 @@ pnpm --filter api prisma db seed   # 25 alumni profiles with precomputed embeddi
 pnpm dev                           # web on :3000, API on :4000
 ```
 
-The frontend reads the API from `NEXT_PUBLIC_API_URL` (default `http://localhost:4000`). The API allows CORS from `http://localhost:3000` only.
+Sign in at http://localhost:3000: in development, pick any alumnus under **Development quick login** (or use email/password if you seeded with `SEED_PASSWORD`, e.g. `anna.kowalska@opm-alumni.example`). The frontend reads the API from `NEXT_PUBLIC_API_URL` (default `http://localhost:4000`). The API allows CORS from `http://localhost:3000` only.
 
 **Seed embeddings:** with `OPENAI_API_KEY` set, the seed stores real `text-embedding-3-small` vectors. Without it, it falls back to a deterministic hashed bag-of-words vector (same 1536 dims) so the database is always populated. Query embeddings come from OpenAI, so seed with `OPENAI_API_KEY` set for semantically comparable vectors.
 
@@ -127,9 +158,9 @@ The API reads `WEB_ORIGIN` (default `http://localhost:3000`) for its CORS allow-
 | `pnpm test:e2e` | Playwright journeys in `apps/e2e`.                                                               |
 | `pnpm test:all` | Both of the above.                                                                               |
 
-- **API (`apps/api`, Vitest + SWC + Supertest).** `intros.spec.ts` drives `IntrosController` and `IntrosService` over HTTP against a stateful in-memory Prisma fake (`src/test/fake-prisma.ts`): self-request `400`, duplicate `409` (both directions), unauthorised status change `403`, pagination math and independent sent/received pages, and the pending-incoming count. `matchmaking.spec.ts` covers `MatchmakingService` with the OpenAI/Anthropic SDKs faked: strict case-insensitive city predicate, requester exclusion, travel-context injection into the prompt, fallback embedding text for an empty or generic query, and invented/duplicate id handling. Shared helpers (`pagination`, `prompt`, `vector`, `env`, Zod pipe) have their own unit tests.
-- **Web (`apps/web`, Vitest + jsdom + Testing Library).** Tests for `utils/`, the `Directory` filter groups and debounced search, `MatchCard` (mutual synergy callout, copy/email/LinkedIn actions, request flow) and the intro `Dialog` (edit, submit, server error, cancel/Escape, draft reset). Components run with the real providers and API client; only `fetch` is faked.
-- **E2E (`apps/e2e`, Playwright).** Journeys: Alumni Directory (city/industry filters, debounced search, layout-shift budget via `PerformanceObserver`), Matchmaker (search, Travel Mode, in-person icebreakers) and the Intro closed loop (A requests B → switch to B → header badge → accept → back to A sees `ACCEPTED`). Playwright starts its own API (`:4100`) and web (`:3100`, built into `.next-e2e`) and prepares the isolated `opm_community_e2e` database (migrate, truncate, seed) on each run, so Docker Postgres (`docker compose up -d`) must be running. `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` are blanked for the run: the seed uses deterministic embeddings and `POST /matchmaking` is stubbed at the browser network layer (the LLM pipeline is covered by the API tests). First-time setup: `pnpm --filter e2e exec playwright install chromium`.
+- **API (`apps/api`, Vitest + SWC + Supertest).** `intros.spec.ts` drives `IntrosController` and `IntrosService` behind the real `AuthGuard` over HTTP with signed bearer tokens (`src/test/auth.ts`) against a stateful in-memory Prisma fake (`src/test/fake-prisma.ts`): `401` for missing/malformed/expired/foreign-signed/`alg: none` tokens, a spoofed `requesterId`/`userId` being ignored, self-request `400`, duplicate `409` (both directions), unauthorised status change `403`, pagination math and independent sent/received pages, and the pending-incoming count. `matchmaking.spec.ts` covers `MatchmakingService` with the OpenAI/Anthropic SDKs faked: strict case-insensitive city predicate, requester exclusion, travel-context injection into the prompt, fallback embedding text for an empty or generic query, and invented/duplicate id handling. `auth.spec.ts` covers `POST /auth/login` (uniform `401`, no hash leakage) and the dev-login gate. Shared helpers (`pagination`, `prompt`, `vector`, `env`, `auth`, `password`, Zod pipe) have their own unit tests.
+- **Web (`apps/web`, Vitest + jsdom + Testing Library).** Tests for `utils/`, the `Directory` filter groups and debounced search, `MatchCard` (mutual synergy callout, copy/email/LinkedIn actions, request flow) and the intro `Dialog` (edit, submit, server error, cancel/Escape, draft reset). `lib/auth.test.ts` covers the NextAuth `authorize`/session callbacks and the signed access token; `AppShell` and `SignIn` tests cover the sign-in gate, bearer headers and dev impersonation. Components run with the real providers and API client; only `fetch` and NextAuth's browser client (`test/next-auth.ts`) are faked.
+- **E2E (`apps/e2e`, Playwright).** Journeys: Authentication (anonymous gate, password sign-in/out, quick login, API `401`s), Alumni Directory (city/industry filters, debounced search, layout-shift budget via `PerformanceObserver`), Matchmaker (search, Travel Mode, in-person icebreakers) and the Intro closed loop (A requests B → switch to B → header badge → accept → back to A sees `ACCEPTED`). Playwright starts its own API (`:4100`) and web (`:3100`, built into `.next-e2e`) and prepares the isolated `opm_community_e2e` database (migrate, truncate, seed) on each run, so Docker Postgres (`docker compose up -d`) must be running. The run sets `AUTH_SECRET`, enables dev login (`next start` runs with `NODE_ENV=production`) and seeds a shared `SEED_PASSWORD`; journeys sign in through quick login via `openApp`. `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` are blanked for the run: the seed uses deterministic embeddings and `POST /matchmaking` is stubbed at the browser network layer (the LLM pipeline is covered by the API tests). First-time setup: `pnpm --filter e2e exec playwright install chromium`.
 
 ## Engineering highlights
 
@@ -138,15 +169,17 @@ The API reads `WEB_ORIGIN` (default `http://localhost:3000`) for its CORS allow-
 - **Zero layout shift in Travel Mode.** The Travel Mode banner, destination control and dates input occupy reserved space in both states (the dates field is `invisible` rather than unmounted on desktop), so toggling never moves the form or results.
 - **Intros tab follows the acting user.** Switching the acting user always returns My Intros to the Received tab (and page 1 for both lists), so the pending badge and the visible list always describe the same user.
 - **Stable intros dashboard.** Sent/Received lists render in a fixed minimum-height container; during page changes the existing list is dimmed (`opacity-60`) rather than replaced by a loader, so pagination does not jump. The 3-column directory grid is preserved.
-- **Acting-as user switcher.** The "Acting as" dropdown sets `currentUserId` in a React context and persists it in local storage. It is sent with matchmaking and intro requests so the API can exclude that user from their own results and load their profile as matching context.
+- **Acting-as user switcher (development).** The "Acting as" dropdown signs in again as the chosen alumnus through the dev-impersonation provider, so the session, and therefore the bearer token the API trusts, always matches the user on screen. The API derives the requester from that token to exclude them from their own results and load their profile as matching context.
 - **Prompt-injection defence.** The user query, target city, travel context, requester profile and candidate profiles are treated as untrusted data: each is encapsulated in delimited tags (`<user_request>`, `<target_city>`, `<travel_context>`, `<requester_profile>`, `<candidates>` as JSON), the system prompt instructs the model never to follow instructions found inside them, output is constrained by a JSON schema, and the response is Zod-validated with returned IDs checked against the candidate set. Request payloads are validated (query 3–1000 chars, or empty with a `travelContext`) before use.
 - **Mobile-first UI.** Header wraps without overflow, starter chips scroll with snap on small screens, and match cards go from 1 to 2 to 3 columns. See `apps/web/FRONTEND_GUIDELINES.md`.
 
 ## End-to-end verification checklist
 
 - [ ] `docker compose up -d` starts Postgres; `prisma migrate dev` and `prisma db seed` succeed (25 profiles).
-- [ ] `GET http://localhost:4000/profiles` returns 25 alumni.
+- [ ] `GET http://localhost:4000/auth/dev/profiles` returns 25 alumni (dev only); `GET /profiles` needs a bearer token.
 - [ ] `pnpm dev` serves the app at http://localhost:3000 with no console errors (favicon loads).
+- [ ] Anonymous visitors see only the sign-in screen; quick login (dev) and email/password both lead into the app, and **Sign out** returns to it.
+- [ ] `curl -i localhost:4000/intros` answers `401`.
 - [ ] **Acting as** dropdown opens under its button, lists all 25 alumni, and switching updates the label.
 - [ ] Clicking a starter chip (e.g. "Fintech in London") shows a loading state, then up to 3 match cards with % match, "Why this match", and an icebreaker.
 - [ ] **Target city** dropdown opens and filters the search by city.

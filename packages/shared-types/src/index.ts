@@ -23,7 +23,6 @@ export interface TravelContext {
 export interface MatchmakingRequest {
   /** May be empty when `travelContext` is set; the API then falls back to the requester's profile. */
   query: string;
-  currentUserId?: string;
   targetCity?: string;
   travelContext?: TravelContext;
 }
@@ -54,16 +53,15 @@ export const IntroStatus = {
   DECLINED: 'DECLINED',
 } as const satisfies Record<IntroStatus, IntroStatus>;
 
+/** The requester is the authenticated user; it is never part of the payload. */
 export interface CreateIntroDto {
-  requesterId: string;
   targetId: string;
   query: string;
   icebreaker: string;
 }
 
+/** The decider is the authenticated user and must be the intro's target. */
 export interface UpdateIntroStatusDto {
-  /** The acting user; must be the intro's target. */
-  userId: string;
   status: 'ACCEPTED' | 'DECLINED';
 }
 
@@ -96,4 +94,23 @@ export interface IntrosResponse {
   received: PaginatedIntros;
   /** Pending incoming intros across all pages (drives the header badge). */
   pendingIncoming: number;
+}
+
+/** The identity the API derives from the bearer token (an HS256 JWT whose `sub` is the profile id, signed with the shared `AUTH_SECRET`). */
+export interface AuthenticatedUser {
+  id: string;
+}
+
+export interface LoginDto {
+  email: string;
+  password: string;
+}
+
+/** Development-only impersonation of a seeded alumnus. */
+export interface DevLoginDto {
+  profileId: string;
+}
+
+export interface LoginResponse {
+  profile: Profile;
 }

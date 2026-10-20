@@ -1,17 +1,24 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
-import { afterEach } from 'vitest';
+import { afterEach, vi } from 'vitest';
+import { resetMockAuth } from './next-auth';
+
+// NextAuth's browser client is an external boundary (it talks to /api/auth/*); see test/next-auth.ts.
+vi.mock('next-auth/react', () => import('./next-auth'));
 
 afterEach(() => {
   cleanup();
-  localStorage.clear();
+  resetMockAuth();
 });
 
-// Radix primitives rely on these browser APIs, which jsdom does not implement.
-globalThis.ResizeObserver ??= class {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-};
-Element.prototype.hasPointerCapture ??= () => false;
-Element.prototype.scrollIntoView ??= () => {};
+// Specs that opt into `@vitest-environment node` (server-only code) have no DOM to patch.
+if (typeof Element !== 'undefined') {
+  // Radix primitives rely on these browser APIs, which jsdom does not implement.
+  globalThis.ResizeObserver ??= class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+  Element.prototype.hasPointerCapture ??= () => false;
+  Element.prototype.scrollIntoView ??= () => {};
+}

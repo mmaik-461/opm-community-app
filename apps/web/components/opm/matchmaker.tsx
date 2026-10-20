@@ -76,7 +76,7 @@ function LoadingState({ stage }: { stage: number }) {
 }
 
 export function Matchmaker() {
-  const { profiles, currentUser } = useUser();
+  const { profiles } = useUser();
   const [query, setQuery] = React.useState('');
   const [city, setCity] = React.useState(ANY_CITY);
   const [travelMode, setTravelMode] = React.useState(false);
@@ -130,7 +130,6 @@ export function Matchmaker() {
       const res = await fetchMatches(
         {
           query: q,
-          currentUserId: currentUser?.id,
           targetCity: city === ANY_CITY ? undefined : city,
           travelContext: travelCity
             ? { city: travelCity, dates: dates.trim() || undefined }

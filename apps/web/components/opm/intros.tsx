@@ -60,7 +60,7 @@ function IntroCard({
     setBusy(status);
     setError(null);
     try {
-      await updateIntroStatus(intro.id, { userId: currentUser.id, status });
+      await updateIntroStatus(intro.id, { status });
     } catch (err) {
       setError(errorMessage(err, 'Could not update the intro'));
     } finally {

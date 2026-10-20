@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronsUpDown, Check, Network } from 'lucide-react';
+import { ChevronsUpDown, Check, LogOut, Network } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,7 @@ import { initials } from '@/utils/profile';
 import { useUser } from './user-context';
 
 export function Header() {
-  const { profiles, currentUser, setCurrentUserId, loading } = useUser();
+  const { profiles, currentUser, setCurrentUserId, devLoginEnabled, signOut, loading } = useUser();
   const { pendingIncoming } = useIntros();
   const introsBadge = pendingIncoming > 0 && (
     <span
@@ -57,48 +57,67 @@ export function Header() {
           </TabsTrigger>
         </TabsList>
 
-        {loading ? (
-          <Skeleton className="h-9 w-32 sm:w-44" />
-        ) : (
-          <DropdownMenu modal={false}>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                className="h-9 max-w-[11rem] gap-2 sm:max-w-[16rem] border-zinc-200 px-2"
-                disabled={profiles.length === 0}
-                aria-label="Switch current user"
-              >
-                <Avatar className="size-6">
-                  {currentUser?.avatarUrl && <AvatarImage src={currentUser.avatarUrl} alt="" />}
-                  <AvatarFallback className="bg-zinc-900 text-[10px] text-white">
-                    {currentUser ? initials(currentUser.fullName) : '?'}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="truncate text-left text-sm">
-                  <span className="hidden text-zinc-500 sm:inline">Acting as: </span>
-                  <span className="font-medium">{currentUser?.fullName ?? 'No profiles'}</span>
-                  {currentUser && (
-                    <span className="hidden text-zinc-500 lg:inline"> ({currentUser.cohort})</span>
-                  )}
-                </span>
-                <ChevronsUpDown className="size-3.5 shrink-0 text-zinc-400" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="max-h-80 w-72 overflow-y-auto">
-              <DropdownMenuLabel className="text-xs font-semibold tracking-wider text-zinc-500 uppercase">
-                Switch acting user
-              </DropdownMenuLabel>
-              {profiles.map((p) => (
-                <DropdownMenuItem key={p.id} onSelect={() => setCurrentUserId(p.id)}>
-                  <span className="flex-1 truncate">
-                    {p.fullName} <span className="text-zinc-500">({p.cohort})</span>
+        <div className="flex items-center gap-2">
+          {loading ? (
+            <Skeleton className="h-9 w-32 sm:w-44" />
+          ) : !devLoginEnabled ? (
+            <span className="truncate text-sm">
+              <span className="hidden text-zinc-500 sm:inline">Signed in as: </span>
+              <span className="font-medium">{currentUser?.fullName}</span>
+            </span>
+          ) : (
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="h-9 max-w-[11rem] gap-2 sm:max-w-[16rem] border-zinc-200 px-2"
+                  disabled={profiles.length === 0}
+                  aria-label="Switch current user"
+                >
+                  <Avatar className="size-6">
+                    {currentUser?.avatarUrl && <AvatarImage src={currentUser.avatarUrl} alt="" />}
+                    <AvatarFallback className="bg-zinc-900 text-[10px] text-white">
+                      {currentUser ? initials(currentUser.fullName) : '?'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="truncate text-left text-sm">
+                    <span className="hidden text-zinc-500 sm:inline">Acting as: </span>
+                    <span className="font-medium">{currentUser?.fullName ?? 'No profiles'}</span>
+                    {currentUser && (
+                      <span className="hidden text-zinc-500 lg:inline">
+                        {' '}
+                        ({currentUser.cohort})
+                      </span>
+                    )}
                   </span>
-                  {p.id === currentUser?.id && <Check className="size-4" />}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+                  <ChevronsUpDown className="size-3.5 shrink-0 text-zinc-400" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="max-h-80 w-72 overflow-y-auto">
+                <DropdownMenuLabel className="text-xs font-semibold tracking-wider text-zinc-500 uppercase">
+                  Switch acting user
+                </DropdownMenuLabel>
+                {profiles.map((p) => (
+                  <DropdownMenuItem key={p.id} onSelect={() => setCurrentUserId(p.id)}>
+                    <span className="flex-1 truncate">
+                      {p.fullName} <span className="text-zinc-500">({p.cohort})</span>
+                    </span>
+                    {p.id === currentUser?.id && <Check className="size-4" />}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-9"
+            aria-label="Sign out"
+            onClick={signOut}
+          >
+            <LogOut aria-hidden />
+          </Button>
+        </div>
       </div>
 
       {/* Tabs on small screens */}

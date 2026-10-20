@@ -27,13 +27,13 @@ const INTRO_INCLUDE = {
 export class IntrosService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(dto: CreateIntroDto): Promise<IntroRequestResponse> {
-    if (dto.requesterId === dto.targetId) {
+  async create(requesterId: string, dto: CreateIntroDto): Promise<IntroRequestResponse> {
+    if (requesterId === dto.targetId) {
       throw new BadRequestException('You cannot request an intro to yourself');
     }
 
     const found = await this.prisma.profile.findMany({
-      where: { id: { in: [dto.requesterId, dto.targetId] } },
+      where: { id: { in: [requesterId, dto.targetId] } },
       select: { id: true },
     });
     if (found.length !== 2) throw new NotFoundException('Requester or target profile not found');
@@ -42,8 +42,8 @@ export class IntrosService {
       where: {
         status: IntroStatus.PENDING,
         OR: [
-          { requesterId: dto.requesterId, targetId: dto.targetId },
-          { requesterId: dto.targetId, targetId: dto.requesterId },
+          { requesterId, targetId: dto.targetId },
+          { requesterId: dto.targetId, targetId: requesterId },
         ],
       },
       select: { id: true },
@@ -54,7 +54,7 @@ export class IntrosService {
 
     return this.prisma.introRequest.create({
       data: {
-        requesterId: dto.requesterId,
+        requesterId,
         targetId: dto.targetId,
         query: dto.query,
         icebreaker: dto.icebreaker,
@@ -63,12 +63,12 @@ export class IntrosService {
     }) as unknown as Promise<IntroRequestResponse>;
   }
 
-  async findForUser(q: ListIntrosQuery): Promise<IntrosResponse> {
+  async findForUser(userId: string, q: ListIntrosQuery): Promise<IntrosResponse> {
     const [sent, received, pendingIncoming] = await Promise.all([
-      this.paginate({ requesterId: q.userId }, q.sentPage, q.limit),
-      this.paginate({ targetId: q.userId }, q.receivedPage, q.limit),
+      this.paginate({ requesterId: userId }, q.sentPage, q.limit),
+      this.paginate({ targetId: userId }, q.receivedPage, q.limit),
       this.prisma.introRequest.count({
-        where: { targetId: q.userId, status: IntroStatus.PENDING },
+        where: { targetId: userId, status: IntroStatus.PENDING },
       }),
     ]);
     return { sent, received, pendingIncoming };
@@ -95,13 +95,17 @@ export class IntrosService {
     };
   }
 
-  async updateStatus(id: string, dto: UpdateIntroStatusDto): Promise<IntroRequestResponse> {
+  async updateStatus(
+    userId: string,
+    id: string,
+    dto: UpdateIntroStatusDto,
+  ): Promise<IntroRequestResponse> {
     const intro = await this.prisma.introRequest.findUnique({
       where: { id },
       select: { targetId: true, status: true },
     });
     if (!intro) throw new NotFoundException(`Intro ${id} not found`);
-    if (intro.targetId !== dto.userId) {
+    if (intro.targetId !== userId) {
       throw new ForbiddenException('Only the intro target can accept or decline');
     }
     if (intro.status !== IntroStatus.PENDING) {

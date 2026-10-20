@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { emptyIntros, makeProfile } from '@/test/fixtures';
 import { jsonError, stubApi } from '@/test/api-fake';
+import { testAccessToken } from '@/test/next-auth';
 import { renderWithProviders } from '@/test/render';
 import { RequestIntroDialog } from './request-intro-dialog';
 
@@ -77,9 +78,11 @@ describe('RequestIntroDialog', () => {
 
     await waitFor(() => expect(onSent).toHaveBeenCalledTimes(1));
     expect(onOpenChange).toHaveBeenLastCalledWith(false);
-    expect(api.calls.find((c) => c.method === 'POST')?.body).toMatchObject({
-      requesterId: 'me',
+    const post = api.calls.find((c) => c.method === 'POST');
+    expect(post?.headers.get('Authorization')).toBe(`Bearer ${testAccessToken('me')}`);
+    expect(post?.body).toEqual({
       targetId: 'p1',
+      query: 'Series A',
       icebreaker: 'Custom hello',
     });
   });

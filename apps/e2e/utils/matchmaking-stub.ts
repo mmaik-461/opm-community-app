@@ -1,26 +1,28 @@
 import type { Page, Route } from '@playwright/test';
 import type { MatchmakingRequest, MatchmakingResponse, Profile } from '@opm/shared-types';
 import { MATCH_COUNT } from '../constants';
+import { userIdFromAuthorization } from './token';
 
 const CORS = {
   'access-control-allow-origin': '*',
-  'access-control-allow-headers': 'content-type',
+  'access-control-allow-headers': 'content-type, authorization',
   'access-control-allow-methods': 'POST, OPTIONS',
 };
 
 /**
  * Builds the response the real service would return for the same request, honouring its
- * documented contract: requester excluded, travel mode restricted to the destination city,
+ * documented contract: requester (the authenticated user) excluded, travel mode restricted to the destination city,
  * and an in-person icebreaker when a travel context is present. The LLM itself is not called
  * (paid, non-deterministic); the service's own behaviour is covered by the API unit tests.
  */
 export function buildMatchmakingResponse(
   profiles: Profile[],
   req: MatchmakingRequest,
+  requesterId: string | undefined,
 ): MatchmakingResponse {
   const city = req.travelContext?.city.toLowerCase();
   const candidates = profiles
-    .filter((p) => p.id !== req.currentUserId)
+    .filter((p) => p.id !== requesterId)
     .filter((p) => !city || p.city.toLowerCase() === city)
     .slice(0, MATCH_COUNT);
 
@@ -42,22 +44,27 @@ export function buildMatchmakingResponse(
 }
 
 /**
- * Intercepts POST /matchmaking. Returns the captured request bodies so tests can assert the
- * frontend sends the right contract.
+ * Intercepts POST /matchmaking. Returns the captured request bodies and the authenticated user id
+ * behind each one, so tests can assert the frontend sends the right contract and credentials.
  */
 export async function stubMatchmaking(
   page: Page,
   profiles: Profile[],
-  respond: (route: Route, body: MatchmakingRequest) => Promise<void> = async (route, body) => {
+  respond: (
+    route: Route,
+    body: MatchmakingRequest,
+    requesterId: string | undefined,
+  ) => Promise<void> = async (route, body, requesterId) => {
     await route.fulfill({
       status: 200,
       headers: CORS,
       contentType: 'application/json',
-      body: JSON.stringify(buildMatchmakingResponse(profiles, body)),
+      body: JSON.stringify(buildMatchmakingResponse(profiles, body, requesterId)),
     });
   },
 ) {
   const requests: MatchmakingRequest[] = [];
+  const requesterIds: (string | undefined)[] = [];
   await page.route('**/matchmaking', async (route) => {
     const request = route.request();
     if (request.method() === 'OPTIONS') {
@@ -65,10 +72,12 @@ export async function stubMatchmaking(
       return;
     }
     const body = request.postDataJSON() as MatchmakingRequest;
+    const requesterId = userIdFromAuthorization(request.headers()['authorization']);
     requests.push(body);
-    await respond(route, body);
+    requesterIds.push(requesterId);
+    await respond(route, body, requesterId);
   });
-  return requests;
+  return { requests, requesterIds };
 }
 
 export function failMatchmaking(route: Route) {

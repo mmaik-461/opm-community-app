@@ -1,6 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 import {
   API_PORT,
+  E2E_AUTH_SECRET,
+  E2E_SEED_PASSWORD,
   API_URL,
   E2E_DATABASE_URL,
   SERVER_START_TIMEOUT_MS,
@@ -29,12 +31,15 @@ export default defineConfig({
   webServer: [
     {
       command: 'node scripts/prepare-db.mjs && pnpm --filter api build && pnpm --filter api start',
-      url: `${API_URL}/profiles`,
+      url: `${API_URL}/health`,
       timeout: SERVER_START_TIMEOUT_MS,
       reuseExistingServer: false,
       env: {
         ...aiOff,
         DATABASE_URL: E2E_DATABASE_URL,
+        AUTH_SECRET: E2E_AUTH_SECRET,
+        AUTH_DEV_LOGIN: 'true',
+        SEED_PASSWORD: E2E_SEED_PASSWORD,
         PORT: String(API_PORT),
         WEB_ORIGIN: WEB_URL,
       },
@@ -44,7 +49,13 @@ export default defineConfig({
       url: WEB_URL,
       timeout: SERVER_START_TIMEOUT_MS,
       reuseExistingServer: false,
-      env: { NEXT_PUBLIC_API_URL: API_URL, NEXT_DIST_DIR: '.next-e2e' },
+      env: {
+        NEXT_PUBLIC_API_URL: API_URL,
+        NEXT_PUBLIC_AUTH_DEV_LOGIN: 'true', // `next start` runs with NODE_ENV=production
+        NEXTAUTH_URL: WEB_URL,
+        AUTH_SECRET: E2E_AUTH_SECRET,
+        NEXT_DIST_DIR: '.next-e2e',
+      },
     },
   ],
 });

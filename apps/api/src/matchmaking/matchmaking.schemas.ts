@@ -9,7 +9,6 @@ export const matchmakingRequestSchema = z
   .object({
     query: z.string().trim().max(1000),
     targetCity: z.string().trim().min(1).max(100).optional(),
-    currentUserId: z.string().trim().min(1).max(100).optional(),
     travelContext: travelContextSchema.optional(),
   })
   .refine((v) => v.travelContext || v.query.length >= 3, {

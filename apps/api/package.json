@@ -21,6 +21,7 @@
     "@nestjs/platform-express": "^10.4.15",
     "@opm/shared-types": "workspace:*",
     "@prisma/client": "^6.1.0",
+    "jose": "^5.9.6",
     "openai": "^7.39.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",

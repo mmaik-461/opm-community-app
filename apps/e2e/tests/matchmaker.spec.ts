@@ -24,13 +24,16 @@ test.describe('AI Matchmaker', () => {
   }) => {
     const profiles = await fetchProfiles(request);
     const requester = profiles.find((p) => p.fullName === REQUESTER)!;
-    const requests = await stubMatchmaking(page, profiles);
+    const { requests, requesterIds } = await stubMatchmaking(page, profiles);
 
     await page.getByRole('button', { name: 'Fintech in London' }).click();
 
     await expect(page.getByText(/Top 3 for .Fintech in London./)).toBeVisible();
     expect(requests).toHaveLength(1);
-    expect(requests[0]).toMatchObject({ query: 'Fintech in London', currentUserId: requester.id });
+    expect(requests[0]).toMatchObject({ query: 'Fintech in London' });
+    // Identity travels in the bearer token, never in the payload.
+    expect(requests[0]).not.toHaveProperty('currentUserId');
+    expect(requesterIds).toEqual([requester.id]);
     expect(requests[0].travelContext).toBeUndefined();
 
     await expect(page.getByText('Mutual synergy')).toHaveCount(MATCH_COUNT);
@@ -45,13 +48,13 @@ test.describe('AI Matchmaker', () => {
   }) => {
     const profiles = await fetchProfiles(request);
     let failing = true;
-    await stubMatchmaking(page, profiles, async (route, body) => {
+    await stubMatchmaking(page, profiles, async (route, body, requesterId) => {
       if (failing) return failMatchmaking(route);
       return route.fulfill({
         status: 200,
         headers: { 'access-control-allow-origin': '*' },
         contentType: 'application/json',
-        body: JSON.stringify(buildMatchmakingResponse(profiles, body)),
+        body: JSON.stringify(buildMatchmakingResponse(profiles, body, requesterId)),
       });
     });
 
@@ -77,7 +80,7 @@ test.describe('AI Matchmaker', () => {
     const destination = 'Berlin';
     const local = profiles.filter((p) => p.city === destination && p.id !== requester.id);
     expect(local.length).toBeGreaterThanOrEqual(MATCH_COUNT);
-    const requests = await stubMatchmaking(page, profiles);
+    const { requests, requesterIds } = await stubMatchmaking(page, profiles);
 
     const travel = page.getByRole('button', { name: 'Travel Mode' });
     const submit = page.getByRole('button', { name: 'Find matches' });
@@ -112,9 +115,9 @@ test.describe('AI Matchmaker', () => {
     );
 
     expect(requests).toHaveLength(1);
+    expect(requesterIds).toEqual([requester.id]);
     expect(requests[0]).toMatchObject({
       query: '',
-      currentUserId: requester.id,
       targetCity: destination,
       travelContext: { city: destination, dates: 'Nov 14-18' },
     });
@@ -136,7 +139,7 @@ test.describe('AI Matchmaker', () => {
     request,
   }) => {
     const profiles = await fetchProfiles(request);
-    const requests = await stubMatchmaking(page, profiles);
+    const { requests } = await stubMatchmaking(page, profiles);
     const travel = page.getByRole('button', { name: 'Travel Mode' });
 
     await travel.click();

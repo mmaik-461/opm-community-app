@@ -8,6 +8,7 @@ import { Header } from './header';
 import { Intros } from './intros';
 import { IntrosProvider } from './intros-context';
 import { Matchmaker } from './matchmaker';
+import { SignIn } from './sign-in';
 import { UserProvider, useUser } from './user-context';
 
 function Content() {
@@ -42,15 +43,26 @@ function Content() {
   );
 }
 
+function Gate() {
+  const { authenticated, devLoginEnabled, loading } = useUser();
+  if (!authenticated) {
+    // While the session is still being read, render nothing rather than flash the sign-in form.
+    return loading ? null : <SignIn devLoginEnabled={devLoginEnabled} />;
+  }
+  return (
+    <IntrosProvider>
+      <Tabs defaultValue="matchmaker" className="gap-0">
+        <Header />
+        <Content />
+      </Tabs>
+    </IntrosProvider>
+  );
+}
+
 export function AppShell() {
   return (
     <UserProvider>
-      <IntrosProvider>
-        <Tabs defaultValue="matchmaker" className="gap-0">
-          <Header />
-          <Content />
-        </Tabs>
-      </IntrosProvider>
+      <Gate />
     </UserProvider>
   );
 }

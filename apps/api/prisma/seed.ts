@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { PrismaClient, TravelStatus } from '@prisma/client';
+import { hashPassword } from '../src/common/utils/password';
 
 const prisma = new PrismaClient();
 const DIMENSIONS = 1536;
@@ -309,19 +310,27 @@ async function main() {
   const { vectors, source } = await generateEmbeddings(profiles.map(embeddingText));
   console.log(`Embeddings: ${source}`);
 
+  // Password sign-in is enabled only when SEED_PASSWORD is set; every seeded alumnus shares it.
+  const seedPassword = process.env.SEED_PASSWORD?.trim();
+  const passwordHash = seedPassword ? await hashPassword(seedPassword) : null;
+  console.log(
+    passwordHash ? 'Password sign-in: enabled (SEED_PASSWORD)' : 'Password sign-in: disabled',
+  );
+
   for (const [i, p] of profiles.entries()) {
     const email = `${slug(p.fullName)}@opm-alumni.example`;
     const linkedinUrl = `https://www.linkedin.com/in/${slug(p.fullName).replace(/\./g, '-')}`;
     const vector = `[${vectors[i].join(',')}]`;
     await prisma.$executeRaw`
-      INSERT INTO "Profile" ("id","fullName","headline","bio","city","travelStatus","cohort","industry","skills","linkedinUrl","email","embedding","updatedAt")
+      INSERT INTO "Profile" ("id","fullName","headline","bio","city","travelStatus","cohort","industry","skills","linkedinUrl","email","passwordHash","embedding","updatedAt")
       VALUES (gen_random_uuid()::text, ${p.fullName}, ${p.headline}, ${p.bio}, ${p.city},
               ${p.travelStatus ?? 'LIVING_IN'}::"TravelStatus", ${p.cohort}, ${p.industry}, ${p.skills},
-              ${linkedinUrl}, ${email}, ${vector}::vector, now())
+              ${linkedinUrl}, ${email}, ${passwordHash}, ${vector}::vector, now())
       ON CONFLICT ("email") DO UPDATE SET
         "fullName"=EXCLUDED."fullName", "headline"=EXCLUDED."headline", "bio"=EXCLUDED."bio", "city"=EXCLUDED."city",
         "travelStatus"=EXCLUDED."travelStatus", "cohort"=EXCLUDED."cohort", "industry"=EXCLUDED."industry",
-        "skills"=EXCLUDED."skills", "linkedinUrl"=EXCLUDED."linkedinUrl", "embedding"=EXCLUDED."embedding", "updatedAt"=now()`;
+        "skills"=EXCLUDED."skills", "linkedinUrl"=EXCLUDED."linkedinUrl",
+        "passwordHash"=COALESCE(EXCLUDED."passwordHash", "Profile"."passwordHash"), "embedding"=EXCLUDED."embedding", "updatedAt"=now()`;
   }
 
   const [{ total, embedded }] = await prisma.$queryRaw<{ total: bigint; embedded: bigint }[]>`

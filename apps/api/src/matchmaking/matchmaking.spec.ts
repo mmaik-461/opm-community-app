@@ -88,23 +88,16 @@ describe('MatchmakingService', () => {
 
   describe('retrieval SQL', () => {
     it('excludes the requester by id and passes the id as a bound parameter', async () => {
-      await service.match({ query: 'fintech mentor', currentUserId: 'me' });
+      await service.match('me', { query: 'fintech mentor' });
       const sql = sqlOf();
       expect(sql.sql).toContain('"id" <> ?');
       expect(sql.values).toContain('me');
       expect(sql.sql).not.toContain("'me'");
     });
 
-    it('omits the exclusion when no requester is identified', async () => {
-      await service.match({ query: 'fintech mentor' });
-      expect(sqlOf().sql).not.toContain('"id" <>');
-      expect(findUnique).not.toHaveBeenCalled();
-    });
-
     it('strictly filters by city (case-insensitive) in travel mode, using a bound parameter', async () => {
-      await service.match({
+      await service.match('me', {
         query: 'coffee',
-        currentUserId: 'me',
         travelContext: { city: 'BeRLiN' },
       });
       const sql = sqlOf();
@@ -113,12 +106,12 @@ describe('MatchmakingService', () => {
     });
 
     it('does not apply the city predicate outside travel mode (targetCity only steers the LLM)', async () => {
-      await service.match({ query: 'fintech mentor', targetCity: 'London' });
+      await service.match('me', { query: 'fintech mentor', targetCity: 'London' });
       expect(sqlOf().sql).not.toContain('lower("city")');
     });
 
     it('orders by cosine distance and caps candidates', async () => {
-      await service.match({ query: 'fintech mentor' });
+      await service.match('me', { query: 'fintech mentor' });
       const sql = sqlOf();
       expect(sql.sql).toMatch(/ORDER BY "embedding" <=> \?::vector/);
       expect(sql.values).toContain(CANDIDATE_LIMIT);
@@ -128,14 +121,14 @@ describe('MatchmakingService', () => {
 
   describe('query embedding', () => {
     it('embeds the trimmed user query when there is no travel context', async () => {
-      await service.match({ query: '  fintech mentor  ', currentUserId: 'me' });
+      await service.match('me', { query: '  fintech mentor  ' });
       expect(sdk.embeddingsCreate).toHaveBeenCalledWith(
         expect.objectContaining({ input: 'fintech mentor' }),
       );
     });
 
     it('falls back to the requester background when travel mode has an empty query', async () => {
-      await service.match({ query: '', currentUserId: 'me', travelContext: { city: 'Berlin' } });
+      await service.match('me', { query: '', travelContext: { city: 'Berlin' } });
       const { input } = sdk.embeddingsCreate.mock.calls[0][0] as { input: string };
       expect(input).toBe(
         [requester.headline, requester.industry, requester.skills.join(', '), requester.bio].join(
@@ -147,16 +140,15 @@ describe('MatchmakingService', () => {
     it.each(['anyone', 'Surprise me', 'meet people!', 'coffee'])(
       'treats the generic travel query %j as empty',
       async (query) => {
-        await service.match({ query, currentUserId: 'me', travelContext: { city: 'Berlin' } });
+        await service.match('me', { query, travelContext: { city: 'Berlin' } });
         const { input } = sdk.embeddingsCreate.mock.calls[0][0] as { input: string };
         expect(input).toContain(requester.headline);
       },
     );
 
     it('keeps a specific travel query instead of the fallback', async () => {
-      await service.match({
+      await service.match('me', {
         query: 'battery storage investors',
-        currentUserId: 'me',
         travelContext: { city: 'Berlin' },
       });
       expect(sdk.embeddingsCreate).toHaveBeenCalledWith(
@@ -166,7 +158,7 @@ describe('MatchmakingService', () => {
 
     it('uses a city-based query when travel mode has nothing to fall back on', async () => {
       findUnique.mockResolvedValue(null);
-      await service.match({ query: '', currentUserId: 'ghost', travelContext: { city: 'Berlin' } });
+      await service.match('ghost', { query: '', travelContext: { city: 'Berlin' } });
       expect(sdk.embeddingsCreate).toHaveBeenCalledWith(
         expect.objectContaining({ input: 'Alumni based in Berlin' }),
       );
@@ -175,9 +167,8 @@ describe('MatchmakingService', () => {
 
   describe('LLM prompt', () => {
     it('injects travel context, target city and requester profile as data tags', async () => {
-      await service.match({
+      await service.match('me', {
         query: 'coffee chat',
-        currentUserId: 'me',
         targetCity: 'Berlin',
         travelContext: { city: 'Berlin', dates: 'Nov 14-18' },
       });
@@ -192,7 +183,7 @@ describe('MatchmakingService', () => {
     });
 
     it('sends no travel_context outside travel mode', async () => {
-      await service.match({ query: 'fintech mentor' });
+      await service.match('me', { query: 'fintech mentor' });
       expect(userMessage()).not.toContain('<travel_context>');
     });
 
@@ -200,7 +191,7 @@ describe('MatchmakingService', () => {
       queryRaw.mockResolvedValue([
         { ...row('a', 'London', 0.1), email: 'secret@example.com', linkedinUrl: 'https://l.in/a' },
       ]);
-      await service.match({ query: 'fintech mentor' });
+      await service.match('me', { query: 'fintech mentor' });
       expect(userMessage()).not.toContain('secret@example.com');
       expect(userMessage()).not.toContain('similarityScore');
     });
@@ -209,14 +200,14 @@ describe('MatchmakingService', () => {
   describe('result assembly', () => {
     it('returns an empty list without calling the LLM when nothing is retrieved', async () => {
       queryRaw.mockResolvedValue([]);
-      await expect(service.match({ query: 'nobody here' })).resolves.toEqual({ matches: [] });
+      await expect(service.match('me', { query: 'nobody here' })).resolves.toEqual({ matches: [] });
       expect(sdk.messagesCreate).not.toHaveBeenCalled();
     });
 
     it('joins picks with DB profiles, rounds similarity and drops invented / duplicate ids', async () => {
       queryRaw.mockResolvedValue([row('a', 'London', 0.1234), row('b', 'London', 0.3)]);
       sdk.messagesCreate.mockResolvedValue(llmReply(['ghost', 'b', 'b', 'a']));
-      const { matches } = await service.match({ query: 'fintech mentor' });
+      const { matches } = await service.match('me', { query: 'fintech mentor' });
       expect(matches.map((m) => m.profile.id)).toEqual(['b', 'a']);
       expect(matches[1].similarityScore).toBe(0.877);
       expect(matches[0]).toMatchObject({
@@ -231,7 +222,7 @@ describe('MatchmakingService', () => {
       const ids = ['a', 'b', 'c', 'd', 'e'];
       queryRaw.mockResolvedValue(ids.map((id, i) => row(id, 'London', i / 10)));
       sdk.messagesCreate.mockResolvedValue(llmReply(ids));
-      const { matches } = await service.match({ query: 'fintech mentor' });
+      const { matches } = await service.match('me', { query: 'fintech mentor' });
       expect(matches).toHaveLength(MATCH_LIMIT);
     });
   });
@@ -241,7 +232,7 @@ describe('MatchmakingService', () => {
 
     it('maps embedding failures to 502', async () => {
       sdk.embeddingsCreate.mockRejectedValue(new Error('rate limited'));
-      await expect(service.match(req)).rejects.toThrow(BadGatewayException);
+      await expect(service.match('me', req)).rejects.toThrow(BadGatewayException);
     });
 
     it('maps malformed model output to 502', async () => {
@@ -249,12 +240,12 @@ describe('MatchmakingService', () => {
         stop_reason: 'end_turn',
         content: [{ type: 'text', text: '{"matches": []}' }],
       });
-      await expect(service.match(req)).rejects.toThrow(BadGatewayException);
+      await expect(service.match('me', req)).rejects.toThrow(BadGatewayException);
     });
 
     it('maps a model refusal to 502', async () => {
       sdk.messagesCreate.mockResolvedValue({ stop_reason: 'refusal', content: [] });
-      await expect(service.match(req)).rejects.toThrow(BadGatewayException);
+      await expect(service.match('me', req)).rejects.toThrow(BadGatewayException);
     });
   });
 });
