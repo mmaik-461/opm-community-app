@@ -1,8 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { AlertTriangle, Check, Inbox, Loader2, Send, X } from 'lucide-react';
-import type { IntroRequestResponse, IntroStatus, Profile } from '@opm/shared-types';
+import { AlertTriangle, Check, ChevronLeft, ChevronRight, Inbox, Loader2, Send, X } from 'lucide-react';
+import type { IntroRequestResponse, IntroStatus, PaginationMeta, Profile } from '@opm/shared-types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -150,12 +150,53 @@ function Empty({ view }: { view: View }) {
   );
 }
 
+function PaginationFooter({
+  meta,
+  loading,
+  onPage,
+}: {
+  meta: PaginationMeta;
+  loading: boolean;
+  onPage: (page: number) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-t border-zinc-200 pt-4">
+      <p className="text-sm text-zinc-600" aria-live="polite">
+        Page {meta.page} of {meta.totalPages}
+        <span className="text-zinc-400"> · </span>
+        {meta.total} {meta.total === 1 ? 'intro' : 'intros'}
+      </p>
+      <div className="flex gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={meta.page <= 1 || loading}
+          onClick={() => onPage(meta.page - 1)}
+        >
+          <ChevronLeft /> Previous
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={meta.page >= meta.totalPages || loading}
+          onClick={() => onPage(meta.page + 1)}
+        >
+          Next <ChevronRight />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function Intros() {
   const { currentUser } = useUser();
-  const { sent, received, pendingIncoming, loading, error, refresh } = useIntros();
+  const { sent, received, setReceivedPage, setSentPage, pendingIncoming, loading, error, refresh } =
+    useIntros();
   const [view, setView] = React.useState<View>('received');
 
-  const list = view === 'received' ? received : sent;
+  const current = view === 'received' ? received : sent;
+  const list = current.data;
+  const setPage = view === 'received' ? setReceivedPage : setSentPage;
 
   const tabs: { id: View; label: string; count?: number }[] = [
     { id: 'received', label: 'Received', count: pendingIncoming },
@@ -186,7 +227,7 @@ export function Intros() {
           >
             {t.label}
             <span className="text-xs text-zinc-500">
-              {t.id === 'received' ? received.length : sent.length}
+              {t.id === 'received' ? received.meta.total : sent.meta.total}
             </span>
             {t.count ? (
               <span className="rounded-full bg-red-600 px-1.5 text-[10px] font-semibold text-white">
@@ -207,24 +248,34 @@ export function Intros() {
         </div>
       )}
 
-      {loading && list.length === 0 ? (
-        <div className="space-y-4">
-          <Skeleton className="h-40 w-full" />
-          <Skeleton className="h-40 w-full" />
-        </div>
-      ) : list.length === 0 && !error ? (
-        <Empty view={view} />
-      ) : (
-        <div className="flex flex-col gap-4">
-          {list.map((i) => (
-            <IntroCard
-              key={i.id}
-              intro={i}
-              direction={view}
-              counterpart={view === 'received' ? i.requester : i.target}
-            />
-          ))}
-        </div>
+      {/* Fixed min-height keeps the footer from jumping between pages. */}
+      <div
+        className={`min-h-[44rem] transition-opacity ${loading && list.length > 0 ? 'opacity-60' : ''}`}
+        aria-busy={loading}
+      >
+        {loading && list.length === 0 ? (
+          <div className="space-y-4">
+            <Skeleton className="h-40 w-full" />
+            <Skeleton className="h-40 w-full" />
+          </div>
+        ) : list.length === 0 && !error ? (
+          <Empty view={view} />
+        ) : (
+          <div className="flex flex-col gap-4">
+            {list.map((i) => (
+              <IntroCard
+                key={i.id}
+                intro={i}
+                direction={view}
+                counterpart={view === 'received' ? i.requester : i.target}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {current.meta.total > 0 && (
+        <PaginationFooter meta={current.meta} loading={loading} onPage={setPage} />
       )}
     </div>
   );

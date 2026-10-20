@@ -9,6 +9,7 @@ import { ZodValidationPipe } from '../matchmaking/zod-validation.pipe';
 import { IntrosService } from './intros.service';
 import {
   createIntroSchema,
+  type ListIntrosQuery,
   listIntrosQuerySchema,
   updateIntroStatusSchema,
 } from './intros.schemas';
@@ -26,9 +27,9 @@ export class IntrosController {
 
   @Get()
   findForUser(
-    @Query(new ZodValidationPipe(listIntrosQuerySchema)) query: { userId: string },
+    @Query(new ZodValidationPipe(listIntrosQuerySchema)) query: ListIntrosQuery,
   ): Promise<IntrosResponse> {
-    return this.intros.findForUser(query.userId);
+    return this.intros.findForUser(query);
   }
 
   @Patch(':id/status')

@@ -1,13 +1,15 @@
 'use client';
 
 import * as React from 'react';
-import type { IntroRequestResponse, IntrosResponse } from '@opm/shared-types';
+import type { IntrosResponse, PaginatedIntros } from '@opm/shared-types';
 import { fetchIntros } from '@/lib/api';
 import { useUser } from './user-context';
 
 interface IntrosContextValue {
-  sent: IntroRequestResponse[];
-  received: IntroRequestResponse[];
+  sent: PaginatedIntros;
+  received: PaginatedIntros;
+  setReceivedPage: (page: number) => void;
+  setSentPage: (page: number) => void;
   pendingIncoming: number;
   loading: boolean;
   error: string | null;
@@ -16,7 +18,8 @@ interface IntrosContextValue {
 
 const IntrosContext = React.createContext<IntrosContextValue | null>(null);
 
-const EMPTY: IntrosResponse = { sent: [], received: [] };
+const EMPTY_PAGE: PaginatedIntros = { data: [], meta: { total: 0, page: 1, totalPages: 1 } };
+const EMPTY: IntrosResponse = { sent: EMPTY_PAGE, received: EMPTY_PAGE, pendingIncoming: 0 };
 
 export function IntrosProvider({ children }: { children: React.ReactNode }) {
   const { currentUser } = useUser();
@@ -24,7 +27,15 @@ export function IntrosProvider({ children }: { children: React.ReactNode }) {
   const [data, setData] = React.useState<IntrosResponse>(EMPTY);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [receivedPage, setReceivedPage] = React.useState(1);
+  const [sentPage, setSentPage] = React.useState(1);
   const [attempt, setAttempt] = React.useState(0);
+
+  // Page state belongs to the acting user; reset when switching.
+  React.useEffect(() => {
+    setReceivedPage(1);
+    setSentPage(1);
+  }, [userId]);
 
   React.useEffect(() => {
     if (!userId) {
@@ -34,8 +45,17 @@ export function IntrosProvider({ children }: { children: React.ReactNode }) {
     const controller = new AbortController();
     setLoading(true);
     setError(null);
-    fetchIntros(userId, controller.signal)
+    fetchIntros(userId, { receivedPage, sentPage }, controller.signal)
       .then((res) => {
+        // A page past the end (e.g. data shrank) snaps back to the last page.
+        if (res.received.data.length === 0 && receivedPage > res.received.meta.totalPages) {
+          setReceivedPage(res.received.meta.totalPages);
+          return;
+        }
+        if (res.sent.data.length === 0 && sentPage > res.sent.meta.totalPages) {
+          setSentPage(res.sent.meta.totalPages);
+          return;
+        }
         setData(res);
         setLoading(false);
       })
@@ -45,14 +65,17 @@ export function IntrosProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
       });
     return () => controller.abort();
-  }, [userId, attempt]);
+  }, [userId, receivedPage, sentPage, attempt]);
 
   const refresh = React.useCallback(() => setAttempt((a) => a + 1), []);
 
   const value = React.useMemo<IntrosContextValue>(
     () => ({
-      ...data,
-      pendingIncoming: data.received.filter((i) => i.status === 'PENDING').length,
+      sent: data.sent,
+      received: data.received,
+      pendingIncoming: data.pendingIncoming,
+      setReceivedPage,
+      setSentPage,
       loading,
       error,
       refresh,

@@ -12,6 +12,13 @@ export const updateIntroStatusSchema = z.object({
   status: z.enum(['ACCEPTED', 'DECLINED']),
 });
 
+export const DEFAULT_INTROS_LIMIT = 5;
+
 export const listIntrosQuerySchema = z.object({
   userId: z.string().trim().min(1).max(100),
+  receivedPage: z.coerce.number().int().min(1).default(1),
+  sentPage: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(50).default(DEFAULT_INTROS_LIMIT),
 });
+
+export type ListIntrosQuery = z.infer<typeof listIntrosQuerySchema>;

@@ -74,7 +74,20 @@ export interface IntroRequestResponse {
   updatedAt: string;
 }
 
+export interface PaginationMeta {
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
+export interface PaginatedIntros {
+  data: IntroRequestResponse[];
+  meta: PaginationMeta;
+}
+
 export interface IntrosResponse {
-  sent: IntroRequestResponse[];
-  received: IntroRequestResponse[];
+  sent: PaginatedIntros;
+  received: PaginatedIntros;
+  /** Pending incoming intros across all pages (drives the header badge). */
+  pendingIncoming: number;
 }

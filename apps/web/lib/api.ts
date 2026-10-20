@@ -57,8 +57,17 @@ export function fetchMatches(
   );
 }
 
-export function fetchIntros(userId: string, signal?: AbortSignal): Promise<IntrosResponse> {
-  return request<IntrosResponse>(`/intros?userId=${encodeURIComponent(userId)}`, undefined, signal);
+export function fetchIntros(
+  userId: string,
+  pages: { receivedPage: number; sentPage: number },
+  signal?: AbortSignal,
+): Promise<IntrosResponse> {
+  const qs = new URLSearchParams({
+    userId,
+    receivedPage: String(pages.receivedPage),
+    sentPage: String(pages.sentPage),
+  });
+  return request<IntrosResponse>(`/intros?${qs}`, undefined, signal);
 }
 
 export function createIntro(body: CreateIntroDto): Promise<IntroRequestResponse> {

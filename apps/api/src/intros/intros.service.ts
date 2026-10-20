@@ -10,8 +10,10 @@ import type {
   CreateIntroDto,
   IntroRequestResponse,
   IntrosResponse,
+  PaginatedIntros,
   UpdateIntroStatusDto,
 } from '@opm/shared-types';
+import { ListIntrosQuery } from './intros.schemas';
 import { PrismaService } from '../prisma/prisma.service';
 import { PROFILE_SELECT } from '../profiles/profiles.service';
 
@@ -60,20 +62,36 @@ export class IntrosService {
     }) as unknown as Promise<IntroRequestResponse>;
   }
 
-  async findForUser(userId: string): Promise<IntrosResponse> {
-    const [sent, received] = await Promise.all([
-      this.prisma.introRequest.findMany({
-        where: { requesterId: userId },
-        include: INTRO_INCLUDE,
-        orderBy: { createdAt: 'desc' },
-      }),
-      this.prisma.introRequest.findMany({
-        where: { targetId: userId },
-        include: INTRO_INCLUDE,
-        orderBy: { createdAt: 'desc' },
+  async findForUser(q: ListIntrosQuery): Promise<IntrosResponse> {
+    const [sent, received, pendingIncoming] = await Promise.all([
+      this.paginate({ requesterId: q.userId }, q.sentPage, q.limit),
+      this.paginate({ targetId: q.userId }, q.receivedPage, q.limit),
+      this.prisma.introRequest.count({
+        where: { targetId: q.userId, status: IntroStatus.PENDING },
       }),
     ]);
-    return { sent, received } as unknown as IntrosResponse;
+    return { sent, received, pendingIncoming };
+  }
+
+  private async paginate(
+    where: Prisma.IntroRequestWhereInput,
+    page: number,
+    limit: number,
+  ): Promise<PaginatedIntros> {
+    const [total, data] = await Promise.all([
+      this.prisma.introRequest.count({ where }),
+      this.prisma.introRequest.findMany({
+        where,
+        include: INTRO_INCLUDE,
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+    ]);
+    return {
+      data: data as unknown as IntroRequestResponse[],
+      meta: { total, page, totalPages: Math.max(1, Math.ceil(total / limit)) },
+    };
   }
 
   async updateStatus(id: string, dto: UpdateIntroStatusDto): Promise<IntroRequestResponse> {
