@@ -21,15 +21,15 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/85 backdrop-blur dark:border-zinc-800">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+      <div className="mx-auto flex min-h-16 max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-2 sm:px-6">
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-zinc-900 text-white">
             <Network className="size-5" aria-hidden />
           </div>
-          <h1 className="truncate text-base font-semibold tracking-tight text-zinc-900">
+          <h1 className="truncate text-sm sm:text-base font-semibold tracking-tight text-zinc-900">
             OPM Community Hub
           </h1>
-          <Badge className="hidden bg-zinc-900 text-[10px] font-semibold tracking-wider text-white uppercase sm:inline-flex">
+          <Badge className="bg-zinc-900 text-[10px] font-semibold tracking-wider text-white uppercase">
             Executive
           </Badge>
         </div>
@@ -44,13 +44,13 @@ export function Header() {
         </TabsList>
 
         {loading ? (
-          <Skeleton className="h-9 w-44" />
+          <Skeleton className="h-9 w-32 sm:w-44" />
         ) : (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="outline"
-                className="h-9 max-w-[16rem] gap-2 border-zinc-200 px-2"
+                className="h-9 max-w-[11rem] gap-2 sm:max-w-[16rem] border-zinc-200 px-2"
                 disabled={profiles.length === 0}
                 aria-label="Switch current user"
               >

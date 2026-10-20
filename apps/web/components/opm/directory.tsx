@@ -28,14 +28,20 @@ function unique(profiles: Profile[], key: FilterKey): string[] {
 export function Directory() {
   const { profiles, loading, error } = useUser();
   const [search, setSearch] = React.useState('');
+  const [debouncedSearch, setDebouncedSearch] = React.useState('');
   const [filters, setFilters] = React.useState<Filters>({
     city: null,
     cohort: null,
     industry: null,
   });
 
+  React.useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 250);
+    return () => clearTimeout(t);
+  }, [search]);
+
   const filtered = React.useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = debouncedSearch.trim().toLowerCase();
     return profiles.filter((p) => {
       if (GROUPS.some(({ key }) => filters[key] && p[key] !== filters[key])) return false;
       if (!q) return true;
@@ -43,7 +49,7 @@ export function Directory() {
         v.toLowerCase().includes(q),
       );
     });
-  }, [profiles, search, filters]);
+  }, [profiles, debouncedSearch, filters]);
 
   const active = GROUPS.some(({ key }) => filters[key]) || search !== '';
 
@@ -53,6 +59,7 @@ export function Directory() {
 
   function reset() {
     setSearch('');
+    setDebouncedSearch('');
     setFilters({ city: null, cohort: null, industry: null });
   }
 
@@ -111,14 +118,15 @@ export function Directory() {
         )}
       </div>
 
+      <div className="min-h-[450px] md:min-h-[50vh]">
       {loading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }, (_, i) => (
             <Skeleton key={i} className="h-44 rounded-xl" />
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center rounded-xl border border-dashed border-zinc-300 bg-white px-6 py-14 text-center">
+        <div className="flex min-h-[450px] flex-col items-center justify-center rounded-xl border border-dashed border-zinc-300 bg-white px-6 py-14 text-center md:min-h-[50vh]">
           <UsersRound className="size-8 text-zinc-400" aria-hidden />
           <p className="mt-3 font-semibold text-zinc-900">
             {error || profiles.length === 0 ? 'No alumni available' : 'No alumni match your filters'}
@@ -130,12 +138,13 @@ export function Directory() {
           )}
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((p) => (
             <ProfileCard key={p.id} profile={p} />
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }

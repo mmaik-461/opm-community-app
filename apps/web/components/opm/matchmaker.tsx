@@ -55,6 +55,7 @@ function LoadingState({ stage }: { stage: number }) {
           </li>
         ))}
       </ol>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
       {[0, 1, 2].map((i) => (
         <Card
           key={i}
@@ -73,6 +74,7 @@ function LoadingState({ stage }: { stage: number }) {
           {stage >= 1 && <Skeleton className="h-12 w-full" />}
         </Card>
       ))}
+      </div>
     </div>
   );
 }
@@ -125,10 +127,17 @@ export function Matchmaker() {
         },
         ctrl.signal,
       );
-      setMatches(res.matches.slice(0, 3));
+      const list = Array.isArray(res?.matches) ? res.matches : null;
+      if (!list) {
+        console.error('[matchmaker] Unexpected /matchmaking response shape', res);
+        throw new Error('Received an unexpected response from the matchmaking service.');
+      }
+      if (ctrl.signal.aborted) return;
+      setMatches(list.slice(0, 3));
       setStatus('done');
     } catch (err) {
       if (ctrl.signal.aborted) return;
+      console.error('[matchmaker] Matchmaking request failed', err);
       setError(err instanceof Error ? err.message : 'Something went wrong');
       setStatus('error');
     } finally {
@@ -148,14 +157,14 @@ export function Matchmaker() {
         <h2 className="mt-2 text-3xl font-semibold tracking-tight text-zinc-900 sm:text-4xl">
           Ask the community
         </h2>
-        <p className="mt-3 text-zinc-600">
+        <p className="mt-3 text-sm text-zinc-600 sm:text-base">
           Describe who you need to meet. We&apos;ll find the right alumni and draft the opening
           message.
         </p>
 
         <form
           onSubmit={onSubmit}
-          className="mt-8 rounded-xl border border-zinc-200 bg-white p-4 text-left shadow-sm"
+          className="mt-8 rounded-xl border border-zinc-200 bg-white p-3 text-left sm:p-4 shadow-sm"
         >
           <label htmlFor="mm-query" className="sr-only">
             What are you looking for?
@@ -175,7 +184,7 @@ export function Matchmaker() {
             placeholder="Visiting London next week — who can connect for a fintech coffee?"
             className="min-h-28 resize-none border-0 text-base shadow-none focus-visible:ring-0"
           />
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-zinc-100 pt-3">
+          <div className="mt-3 flex flex-col gap-3 border-t border-zinc-100 pt-3 sm:flex-row sm:items-center sm:justify-between">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button type="button" variant="outline" size="sm" disabled={cities.length === 0}>
@@ -198,7 +207,7 @@ export function Matchmaker() {
               type="submit"
               size="lg"
               disabled={!query.trim() || status === 'loading'}
-              className="bg-zinc-900 px-4 text-white hover:bg-zinc-800"
+              className="w-full bg-zinc-900 px-4 text-white hover:bg-zinc-800 sm:w-auto"
             >
               {status === 'loading' ? <Loader2 className="animate-spin" /> : <Sparkles />}
               Find matches
@@ -206,7 +215,7 @@ export function Matchmaker() {
           </div>
         </form>
 
-        <div className="mt-4 flex flex-wrap justify-center gap-2">
+        <div className="mt-4 flex flex-wrap justify-center gap-2 max-sm:-mx-4 max-sm:flex-nowrap max-sm:justify-start max-sm:snap-x max-sm:overflow-x-auto max-sm:px-4 max-sm:pb-2">
           {STARTERS.map((s) => (
             <button
               key={s}
@@ -216,7 +225,7 @@ export function Matchmaker() {
                 setQuery(s);
                 void search(s);
               }}
-              className="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-700 transition-all duration-200 hover:border-zinc-300 hover:bg-zinc-100 hover:shadow-sm disabled:opacity-50"
+              className="shrink-0 snap-start rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-700 transition-all duration-200 hover:border-zinc-300 hover:bg-zinc-100 hover:shadow-sm disabled:opacity-50"
             >
               {s}
             </button>
@@ -224,7 +233,7 @@ export function Matchmaker() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-3xl" aria-live="polite">
+      <section className="mx-auto w-full max-w-6xl" aria-live="polite">
         {status === 'loading' && <LoadingState stage={stage} />}
 
         {status === 'error' && (
@@ -255,12 +264,14 @@ export function Matchmaker() {
 
         {status === 'done' && matches.length > 0 && (
           <div className="space-y-4">
-            <p className={labelClass}>
+            <p className={`${labelClass} break-words`}>
               Top {matches.length} for &ldquo;{searched}&rdquo;
             </p>
-            {matches.map((m, i) => (
-              <MatchCard key={m.profile.id} match={m} rank={i + 1} />
-            ))}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {matches.map((m, i) => (
+                <MatchCard key={m.profile?.id ?? i} match={m} rank={i + 1} />
+              ))}
+            </div>
           </div>
         )}
       </section>
