@@ -125,32 +125,33 @@ export function Directory() {
         </div>
       </div>
 
-      <div className="relative min-h-[36rem]">
-      {loading ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }, (_, i) => (
+      <div className="grid min-h-[36rem] w-full content-start grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {loading ? (
+          Array.from({ length: 6 }, (_, i) => (
             <Skeleton key={i} className="h-44 rounded-xl" />
-          ))}
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="absolute inset-0 flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-200 bg-white p-6 text-center dark:border-zinc-800 dark:bg-zinc-900">
-          <UsersRound className="size-8 text-zinc-400" aria-hidden />
-          <p className="mt-3 font-semibold text-zinc-900">
-            {error || profiles.length === 0 ? 'No alumni available' : 'No alumni match your filters'}
-          </p>
-          {active && (
-            <Button variant="outline" size="sm" className="mt-4" onClick={reset}>
-              Clear filters
-            </Button>
-          )}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((p) => (
+          ))
+        ) : filtered.length === 0 ? (
+          <div className="col-span-full flex min-h-[36rem] w-full flex-col items-center justify-center rounded-xl border border-dashed border-zinc-200 bg-white p-8 text-center dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="flex max-w-sm flex-col items-center justify-center">
+              <UsersRound className="size-10 text-zinc-400" aria-hidden />
+              <p className="mt-3 font-semibold text-zinc-900 dark:text-zinc-100">
+                {error || profiles.length === 0 ? 'No alumni available' : 'No alumni match your filters'}
+              </p>
+              <p className="mt-1 text-sm text-zinc-500">
+                Try adjusting your search query or clearing some filters to see more results.
+              </p>
+              {active && (
+                <Button variant="outline" size="sm" className="mt-5" onClick={reset}>
+                  Clear filters
+                </Button>
+              )}
+            </div>
+          </div>
+        ) : (
+          filtered.map((p) => (
             <ProfileCard key={p.id} profile={p} />
-          ))}
-        </div>
-      )}
+          ))
+        )}
       </div>
     </div>
   );
