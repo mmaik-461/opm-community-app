@@ -55,7 +55,7 @@ function LoadingState({ stage }: { stage: number }) {
           </li>
         ))}
       </ol>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="flex w-full flex-col gap-4">
       {[0, 1, 2].map((i) => (
         <Card
           key={i}
@@ -267,7 +267,7 @@ export function Matchmaker() {
             <p className={`${labelClass} break-words`}>
               Top {matches.length} for &ldquo;{searched}&rdquo;
             </p>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="flex w-full flex-col gap-4">
               {matches.map((m, i) => (
                 <MatchCard key={m.profile?.id ?? i} match={m} rank={i + 1} />
               ))}
