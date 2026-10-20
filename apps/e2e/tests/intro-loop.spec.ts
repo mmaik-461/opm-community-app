@@ -66,8 +66,18 @@ test.describe('Intro request closed loop', () => {
     await expect(page.getByText('Pending', { exact: true })).toBeVisible();
     await expect(page.getByLabel(/pending$/)).toHaveCount(0); // A has nothing incoming
 
-    // --- B sees the pending badge in the header, then accepts
+    // --- switching user while on Sent lands the new user on Received
     await actAs(page, target);
+    await expect(page.getByRole('tab', { name: /^Received/ })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await expect(page.getByRole('tab', { name: /^Sent/ })).toHaveAttribute(
+      'aria-selected',
+      'false',
+    );
+
+    // --- B sees the pending badge in the header, then accepts
     await expect(
       page.getByRole('tab', { name: /^My Intros/ }).getByLabel('1 pending'),
     ).toBeVisible();

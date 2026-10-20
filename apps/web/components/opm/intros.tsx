@@ -195,6 +195,14 @@ export function Intros() {
   const { sent, received, setReceivedPage, setSentPage, pendingIncoming, loading, error, refresh } =
     useIntros();
   const [view, setView] = React.useState<IntroView>('received');
+  const userId = currentUser?.id ?? null;
+  const [viewUserId, setViewUserId] = React.useState(userId);
+
+  // Switching the acting user returns to the natural entry point; adjusting during render avoids a flash of the old tab.
+  if (viewUserId !== userId) {
+    setViewUserId(userId);
+    setView('received');
+  }
 
   const current = view === 'received' ? received : sent;
   const list = current.data;
