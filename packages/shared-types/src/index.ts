@@ -26,6 +26,7 @@ export interface MatchResult {
   profile: Profile;
   similarityScore: number;
   matchReason: string;
+  mutualSynergy?: string;
   suggestedIcebreaker: string;
 }
 

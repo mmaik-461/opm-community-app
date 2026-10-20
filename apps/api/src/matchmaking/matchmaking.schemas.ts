@@ -13,6 +13,7 @@ export const llmMatchesSchema = z.object({
       z.object({
         profileId: z.string(),
         matchReason: z.string().min(1),
+        mutualSynergy: z.string().min(1),
         suggestedIcebreaker: z.string().min(1),
       }),
     )
@@ -32,9 +33,10 @@ export const llmMatchesJsonSchema = {
         properties: {
           profileId: { type: 'string' },
           matchReason: { type: 'string' },
+          mutualSynergy: { type: 'string' },
           suggestedIcebreaker: { type: 'string' },
         },
-        required: ['profileId', 'matchReason', 'suggestedIcebreaker'],
+        required: ['profileId', 'matchReason', 'mutualSynergy', 'suggestedIcebreaker'],
         additionalProperties: false,
       },
     },

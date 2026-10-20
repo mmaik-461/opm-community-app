@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Check, Copy, ExternalLink, Lightbulb, Mail, MapPin, Sparkles } from 'lucide-react';
+import { Check, Copy, ExternalLink, Lightbulb, Handshake, Mail, MapPin, Sparkles } from 'lucide-react';
 import type { MatchResult } from '@opm/shared-types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -108,6 +108,15 @@ export function MatchCard({ match, rank }: { match: MatchResult; rank: number })
         </p>
         <p className="text-sm leading-relaxed text-zinc-800">{match.matchReason}</p>
       </div>
+
+      {match.mutualSynergy && (
+        <div className="rounded-lg border border-amber-100 bg-amber-50/70 p-4">
+          <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold tracking-wider text-amber-700 uppercase">
+            <Handshake className="size-3.5" aria-hidden /> Mutual synergy
+          </p>
+          <p className="text-sm leading-relaxed text-zinc-800">{match.mutualSynergy}</p>
+        </div>
+      )}
 
       <div>
         <div className="mb-2 flex items-center justify-between gap-2">
