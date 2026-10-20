@@ -13,7 +13,10 @@ import { buildQueryString, isAbortError } from '@/utils/api';
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? DEFAULT_API_URL;
 
 export class ApiError extends Error {
-  constructor(message: string, readonly status?: number) {
+  constructor(
+    message: string,
+    readonly status?: number,
+  ) {
     super(message);
     this.name = 'ApiError';
   }

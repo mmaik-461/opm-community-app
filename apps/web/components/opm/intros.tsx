@@ -1,7 +1,16 @@
 'use client';
 
 import * as React from 'react';
-import { AlertTriangle, Check, ChevronLeft, ChevronRight, Inbox, Loader2, Send, X } from 'lucide-react';
+import {
+  AlertTriangle,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Inbox,
+  Loader2,
+  Send,
+  X,
+} from 'lucide-react';
 import type { IntroRequestResponse, IntroStatus, PaginationMeta, Profile } from '@opm/shared-types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -191,18 +200,23 @@ export function Intros() {
   const list = current.data;
   const setPage = view === 'received' ? setReceivedPage : setSentPage;
 
-
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <section className="text-center">
         <p className={LABEL_CLASS}>My Intros</p>
-        <h2 className="mt-2 text-3xl font-semibold tracking-tight text-zinc-900">Your introductions</h2>
+        <h2 className="mt-2 text-3xl font-semibold tracking-tight text-zinc-900">
+          Your introductions
+        </h2>
         {currentUser && (
           <p className="mt-2 text-sm text-zinc-600">Showing intros for {currentUser.fullName}.</p>
         )}
       </section>
 
-      <div role="tablist" aria-label="Intro direction" className="mx-auto flex w-fit gap-1 rounded-lg bg-zinc-100 p-[3px]">
+      <div
+        role="tablist"
+        aria-label="Intro direction"
+        className="mx-auto flex w-fit gap-1 rounded-lg bg-zinc-100 p-[3px]"
+      >
         {INTRO_VIEWS.map((id) => (
           <button
             key={id}
@@ -228,7 +242,10 @@ export function Intros() {
       </div>
 
       {error && (
-        <div role="alert" className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+        <div
+          role="alert"
+          className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900"
+        >
           <AlertTriangle className="size-5 shrink-0 text-red-600" aria-hidden />
           <span className="flex-1">{error}</span>
           <Button variant="outline" size="sm" onClick={refresh}>

@@ -11,6 +11,7 @@
   - Multi-stage animated skeleton loaders during AI matchmaking calls.
 
 ## Responsive Design (Mobile-First by Default)
+
 - **Mobile-first**: write base classes for < 640px, then layer `sm:` (640px), `md:`, `lg:` (1024px), `xl:` overrides. Every new component must work at 360px width with no horizontal page scroll.
 - **Breakpoints**: mobile < 640px, tablet 640–1024px, desktop > 1024px.
 - **Grids**: card lists use `grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3` (match results: `xl:grid-cols-3`).

@@ -2,7 +2,12 @@ import { BadGatewayException, Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
-import type { MatchmakingRequest, MatchmakingResponse, MatchResult, Profile } from '@opm/shared-types';
+import type {
+  MatchmakingRequest,
+  MatchmakingResponse,
+  MatchResult,
+  Profile,
+} from '@opm/shared-types';
 import {
   CANDIDATE_LIMIT,
   DEFAULT_CLAUDE_MODEL,
@@ -71,9 +76,7 @@ export class MatchmakingService {
     requester: Awaited<ReturnType<MatchmakingService['findRequester']>>,
   ): Promise<Candidate[]> {
     const vector = toVectorLiteral(await this.embed(this.effectiveQuery(req, requester)));
-    const exclude = req.currentUserId
-      ? Prisma.sql`AND "id" <> ${req.currentUserId}`
-      : Prisma.empty;
+    const exclude = req.currentUserId ? Prisma.sql`AND "id" <> ${req.currentUserId}` : Prisma.empty;
     const cityFilter = req.travelContext
       ? Prisma.sql`AND lower("city") = lower(${req.travelContext.city})`
       : Prisma.empty;
@@ -127,7 +130,7 @@ export class MatchmakingService {
   ) {
     this.anthropic ??= requireEnvKey('ANTHROPIC_API_KEY', (apiKey) => new Anthropic({ apiKey }));
 
-    const candidateData = candidates.map(({ similarityScore, ...p }) => ({
+    const candidateData = candidates.map(({ similarityScore: _similarityScore, ...p }) => ({
       profileId: p.id,
       fullName: p.fullName,
       headline: p.headline,

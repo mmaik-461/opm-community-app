@@ -4,17 +4,17 @@ A production-grade community platform for OPM alumni, built around one core jour
 
 ## Value proposition
 
-Alumni networks are valuable but hard to navigate. Instead of browsing a directory, a member describes what they need in plain language ("Visiting London next week — who can connect for a fintech coffee?"). The hub finds the alumni best placed to help, explains *why* each one is a fit, and drafts a personalised opening message to copy, email, or send via LinkedIn.
+Alumni networks are valuable but hard to navigate. Instead of browsing a directory, a member describes what they need in plain language ("Visiting London next week — who can connect for a fintech coffee?"). The hub finds the alumni best placed to help, explains _why_ each one is a fit, and drafts a personalised opening message to copy, email, or send via LinkedIn.
 
 The platform is intentionally focused on introductions: the conversation itself continues on the channel members prefer (email, LinkedIn, WhatsApp), while the hub owns discovery, drafting and tracking of every introduction request.
 
 ## Features
 
-| Feature | What it does |
-|---|---|
-| **Two-Way Contextual Matchmaking** | Claude reasons over the requester's own profile (`<requester_profile>`) as well as the candidates. Each match returns a grounded `matchReason`, a structured `mutualSynergy` (the win-win angle: what the requester brings to the candidate), and a tailored `suggestedIcebreaker`. The requester is always excluded from their own results. |
-| **Intro Request Workflow** | Closed loop, persisted in Postgres (`IntroRequest`, status `PENDING` / `ACCEPTED` / `DECLINED`). A pre-flight dialog lets the member edit the icebreaker before sending. Self-requests and duplicate pending requests are rejected. Sent and Received tabs are paginated independently, and a persistent badge in the header shows pending incoming requests. |
-| **City Travel Mode** | Pick a destination city and optional dates. Candidates are strictly filtered to that city (case-insensitive), and icebreakers propose an in-person meetup that references the travel dates. If the free-form query is empty or generic, retrieval falls back to the requester's headline, industry, skills and bio. |
+| Feature                            | What it does                                                                                                                                                                                                                                                                                                                                                  |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Two-Way Contextual Matchmaking** | Claude reasons over the requester's own profile (`<requester_profile>`) as well as the candidates. Each match returns a grounded `matchReason`, a structured `mutualSynergy` (the win-win angle: what the requester brings to the candidate), and a tailored `suggestedIcebreaker`. The requester is always excluded from their own results.                  |
+| **Intro Request Workflow**         | Closed loop, persisted in Postgres (`IntroRequest`, status `PENDING` / `ACCEPTED` / `DECLINED`). A pre-flight dialog lets the member edit the icebreaker before sending. Self-requests and duplicate pending requests are rejected. Sent and Received tabs are paginated independently, and a persistent badge in the header shows pending incoming requests. |
+| **City Travel Mode**               | Pick a destination city and optional dates. Candidates are strictly filtered to that city (case-insensitive), and icebreakers propose an in-person meetup that references the travel dates. If the free-form query is empty or generic, retrieval falls back to the requester's headline, industry, skills and bio.                                           |
 
 ## Architecture: two-stage hybrid AI
 
@@ -34,13 +34,13 @@ Shared request/response contracts live in `packages/shared-types` and are used b
 
 ### API surface
 
-| Route | Purpose |
-|---|---|
-| `GET /profiles` | Alumni directory (filters: `city`, `cohort`, `industry`). |
-| `POST /matchmaking` | `{ query, currentUserId?, targetCity?, travelContext?: { city, dates? } }` → top 3 `MatchResult`. `query` may be empty only when `travelContext` is set. |
-| `POST /intros` | Create an intro request (`PENDING`). `400` for self-requests, `409` for a duplicate pending request. |
-| `GET /intros` | Sent and received intros for a user: `PaginatedIntros` per direction (`receivedPage`, `sentPage`, `limit`) plus `pendingIncoming` for the header badge. |
-| `PATCH /intros/:id/status` | Target accepts or declines. `409` if already answered. |
+| Route                      | Purpose                                                                                                                                                  |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /profiles`            | Alumni directory (filters: `city`, `cohort`, `industry`).                                                                                                |
+| `POST /matchmaking`        | `{ query, currentUserId?, targetCity?, travelContext?: { city, dates? } }` → top 3 `MatchResult`. `query` may be empty only when `travelContext` is set. |
+| `POST /intros`             | Create an intro request (`PENDING`). `400` for self-requests, `409` for a duplicate pending request.                                                     |
+| `GET /intros`              | Sent and received intros for a user: `PaginatedIntros` per direction (`receivedPage`, `sentPage`, `limit`) plus `pendingIncoming` for the header badge.  |
+| `PATCH /intros/:id/status` | Target accepts or declines. `409` if already answered.                                                                                                   |
 
 ### Data model
 
@@ -58,14 +58,14 @@ indexes: (requesterId), (targetId, status)
 
 ## Tech stack
 
-| Layer | Choice |
-|---|---|
-| Monorepo | Turborepo, pnpm workspaces |
-| Web | Next.js 14 (App Router), React 18, Tailwind CSS v4, Radix UI (shadcn/ui components) |
-| API | NestJS, Prisma ORM, Zod validation pipes |
-| Database | PostgreSQL 16 + pgvector (Docker Compose) |
-| AI | OpenAI `text-embedding-3-small`, Anthropic Claude |
-| Language | TypeScript (strict) |
+| Layer    | Choice                                                                              |
+| -------- | ----------------------------------------------------------------------------------- |
+| Monorepo | Turborepo, pnpm workspaces                                                          |
+| Web      | Next.js 14 (App Router), React 18, Tailwind CSS v4, Radix UI (shadcn/ui components) |
+| API      | NestJS, Prisma ORM, Zod validation pipes                                            |
+| Database | PostgreSQL 16 + pgvector (Docker Compose)                                           |
+| AI       | OpenAI `text-embedding-3-small`, Anthropic Claude                                   |
+| Language | TypeScript (strict)                                                                 |
 
 ```
 apps/web                Next.js frontend

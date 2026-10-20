@@ -6,7 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ProfileCard } from './profile-card';
-import { DIRECTORY_SKELETON_COUNT, EMPTY_FILTERS, FILTER_GROUPS, SEARCH_DEBOUNCE_MS, type FilterKey, type Filters } from '@/constants/directory';
+import {
+  DIRECTORY_SKELETON_COUNT,
+  EMPTY_FILTERS,
+  FILTER_GROUPS,
+  SEARCH_DEBOUNCE_MS,
+  type FilterKey,
+  type Filters,
+} from '@/constants/directory';
 import { LABEL_CLASS } from '@/constants/ui';
 import { matchesSearch, uniqueValues } from '@/utils/profile';
 import { useUser } from './user-context';
@@ -114,7 +121,9 @@ export function Directory() {
             <div className="flex max-w-sm flex-col items-center justify-center">
               <UsersRound className="size-10 text-zinc-400" aria-hidden />
               <p className="mt-3 font-semibold text-zinc-900 dark:text-zinc-100">
-                {error || profiles.length === 0 ? 'No alumni available' : 'No alumni match your filters'}
+                {error || profiles.length === 0
+                  ? 'No alumni available'
+                  : 'No alumni match your filters'}
               </p>
               <p className="mt-1 text-sm text-zinc-500">
                 Try adjusting your search query or clearing some filters to see more results.
@@ -127,9 +136,7 @@ export function Directory() {
             </div>
           </div>
         ) : (
-          filtered.map((p) => (
-            <ProfileCard key={p.id} profile={p} />
-          ))
+          filtered.map((p) => <ProfileCard key={p.id} profile={p} />)
         )}
       </div>
     </div>

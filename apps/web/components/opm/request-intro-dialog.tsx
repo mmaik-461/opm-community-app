@@ -31,7 +31,14 @@ interface Props {
   onSent: () => void;
 }
 
-export function RequestIntroDialog({ open, onOpenChange, target, query, icebreaker, onSent }: Props) {
+export function RequestIntroDialog({
+  open,
+  onOpenChange,
+  target,
+  query,
+  icebreaker,
+  onSent,
+}: Props) {
   const { currentUser } = useUser();
   const { refresh } = useIntros();
   const [message, setMessage] = React.useState(icebreaker);
@@ -113,7 +120,9 @@ export function RequestIntroDialog({ open, onOpenChange, target, query, icebreak
           />
         </div>
 
-        {isSelf && <p className="text-sm text-red-700">You can&apos;t request an intro to yourself.</p>}
+        {isSelf && (
+          <p className="text-sm text-red-700">You can&apos;t request an intro to yourself.</p>
+        )}
         {error && (
           <p role="alert" className="flex items-start gap-2 text-sm text-red-700">
             <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden /> {error}

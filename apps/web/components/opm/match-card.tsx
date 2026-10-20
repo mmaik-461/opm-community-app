@@ -1,7 +1,17 @@
 'use client';
 
 import * as React from 'react';
-import { Check, Copy, ExternalLink, Lightbulb, Handshake, Mail, MapPin, Send, Sparkles } from 'lucide-react';
+import {
+  Check,
+  Copy,
+  ExternalLink,
+  Lightbulb,
+  Handshake,
+  Mail,
+  MapPin,
+  Send,
+  Sparkles,
+} from 'lucide-react';
 import type { MatchResult } from '@opm/shared-types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -52,7 +62,15 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-export function MatchCard({ match, rank, query }: { match: MatchResult; rank: number; query: string }) {
+export function MatchCard({
+  match,
+  rank,
+  query,
+}: {
+  match: MatchResult;
+  rank: number;
+  query: string;
+}) {
   const { profile } = match;
   const { currentUser } = useUser();
   const [dialogOpen, setDialogOpen] = React.useState(false);
@@ -135,19 +153,19 @@ export function MatchCard({ match, rank, query }: { match: MatchResult; rank: nu
         </Button>
         <CopyButton text={match.suggestedIcebreaker} />
         {mailto && (
-            <Button asChild variant="outline" size="sm">
-              <a href={mailto}>
-                <Mail /> Email
-              </a>
-            </Button>
-          )}
-          {linkedin && (
-            <Button asChild variant="outline" size="sm">
-              <a href={linkedin} target="_blank" rel="noopener noreferrer">
-                <ExternalLink /> LinkedIn
-              </a>
-            </Button>
-          )}
+          <Button asChild variant="outline" size="sm">
+            <a href={mailto}>
+              <Mail /> Email
+            </a>
+          </Button>
+        )}
+        {linkedin && (
+          <Button asChild variant="outline" size="sm">
+            <a href={linkedin} target="_blank" rel="noopener noreferrer">
+              <ExternalLink /> LinkedIn
+            </a>
+          </Button>
+        )}
       </div>
       <RequestIntroDialog
         open={dialogOpen}

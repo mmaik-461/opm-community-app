@@ -6,5 +6,7 @@ export function dataTag(tag: string, value: unknown): string {
 }
 
 export function travelContextTag(travel?: TravelContext): string {
-  return travel ? dataTag('travel_context', { city: travel.city, dates: travel.dates ?? null }) : '';
+  return travel
+    ? dataTag('travel_context', { city: travel.city, dates: travel.dates ?? null })
+    : '';
 }

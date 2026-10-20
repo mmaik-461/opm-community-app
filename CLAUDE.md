@@ -1,9 +1,11 @@
 # OPM Community App — Claude Code Instructions
 
 ## Project Overview
+
 Production-grade platform for the OPM alumni community: "Ask Community + AI Matchmaking" (semantic search via pgvector, two-way contextual matching, icebreaker generation and a closed-loop intro workflow). The architecture is modular and extensible; every module ships complete, validated and typed.
 
 ## Tech Stack & Monorepo Layout
+
 - Monorepo: Turborepo + pnpm
 - Infrastructure: Local Docker Compose (PostgreSQL 16 with pgvector)
 - Apps:
@@ -15,7 +17,9 @@ Production-grade platform for the OPM alumni community: "Ask Community + AI Matc
 - Language: TypeScript (strict mode throughout)
 
 ## Key Development Commands
+
 Always execute commands using pnpm filters from the monorepo root:
+
 - Install: `pnpm install`
 - Dev (all): `pnpm dev`
 - Dev (targeted):
@@ -25,7 +29,9 @@ Always execute commands using pnpm filters from the monorepo root:
 - Lint & Typecheck:
   - `pnpm --filter web typecheck`
   - `pnpm --filter api typecheck`
-  - `pnpm lint`
+  - `pnpm lint` (ESLint flat config, whole monorepo)
+  - `pnpm lint:fix` (ESLint with autofix)
+  - `pnpm format` (Prettier write) / `pnpm format:check`
 - Database & Prisma:
   - Start DB container: `docker compose up -d`
   - Generate client: `pnpm --filter api prisma generate`
@@ -33,6 +39,7 @@ Always execute commands using pnpm filters from the monorepo root:
   - Seed DB: `pnpm --filter api prisma db seed`
 
 ## Architecture Principles (Strict)
+
 1. **Scope Boundaries:**
    - Conversations continue on external channels (LinkedIn / WhatsApp / Email); the platform owns discovery, AI icebreaker generation and intro-request tracking. No real-time chat/WebSockets.
    - Identity is provided by the frontend acting-as user switcher; the selected `currentUserId` is sent with matchmaking and intro requests.
@@ -47,6 +54,7 @@ Always execute commands using pnpm filters from the monorepo root:
    - All shared API contracts must reside in `packages/shared-types` before implementing endpoints.
 
 ## Code Style & Conventions
+
 - Frontend:
   - Server Components by default; add `'use client'` only when state/interactivity is required.
   - UI components from shadcn/ui (`apps/web/components/ui`).
@@ -56,10 +64,13 @@ Always execute commands using pnpm filters from the monorepo root:
   - Never run raw Prisma queries inside controllers; use service layers.
 
 ## Testing & Quality Gate
+
 - Run `typecheck` and `lint` on modified packages before finalizing any feature.
+- Verification: `pnpm format`, `pnpm lint` (use `pnpm lint:fix` for autofixable issues) and the shared-types/api/web builds must pass with zero errors.
 - Ensure the seed script generates 20-30 realistic alumni profiles with precalculated embeddings.
 
 ## Code Style & Architecture Guidelines
+
 - **Utilities:** all shared helper functions MUST live in `utils/` (`apps/web/utils/`, `apps/api/src/common/utils/`). Never define formatters, query builders, URL/string helpers or style helpers inline in components or services.
 - **Constants:** static constants, options, copy, class tokens, limits, prompts and configuration arrays MUST live in `constants/` (`apps/web/constants/`, `apps/api/src/common/constants/`).
 - **Components:** components focus strictly on JSX rendering and component-level reactive state. Data shaping, formatting and configuration are imported.

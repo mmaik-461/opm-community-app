@@ -52,24 +52,24 @@ function LoadingState({ stage }: { stage: number }) {
         ))}
       </ol>
       <div className="flex w-full flex-col gap-4">
-      {[0, 1, 2].map((i) => (
-        <Card
-          key={i}
-          className="gap-4 border border-zinc-200 bg-white p-6 shadow-none ring-0"
-          style={{ opacity: 1 - i * 0.2 }}
-        >
-          <div className="flex items-center gap-4">
-            <Skeleton className="size-12 rounded-full" />
-            <div className="flex-1 space-y-2">
-              <Skeleton className="h-4 w-1/3" />
-              <Skeleton className="h-3 w-2/3" />
+        {[0, 1, 2].map((i) => (
+          <Card
+            key={i}
+            className="gap-4 border border-zinc-200 bg-white p-6 shadow-none ring-0"
+            style={{ opacity: 1 - i * 0.2 }}
+          >
+            <div className="flex items-center gap-4">
+              <Skeleton className="size-12 rounded-full" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-1/3" />
+                <Skeleton className="h-3 w-2/3" />
+              </div>
+              <Skeleton className="h-6 w-20 rounded-full" />
             </div>
-            <Skeleton className="h-6 w-20 rounded-full" />
-          </div>
-          <Skeleton className="h-16 w-full" />
-          {stage >= 1 && <Skeleton className="h-12 w-full" />}
-        </Card>
-      ))}
+            <Skeleton className="h-16 w-full" />
+            {stage >= 1 && <Skeleton className="h-12 w-full" />}
+          </Card>
+        ))}
       </div>
     </div>
   );
