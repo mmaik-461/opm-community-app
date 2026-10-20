@@ -63,6 +63,18 @@ Always execute commands using pnpm filters from the monorepo root:
   - Validation pipes with `class-validator` / `zod` for all incoming payloads.
   - Never run raw Prisma queries inside controllers; use service layers.
 
+## Testing & Verification Protocol (Mandatory)
+
+- **Tests are part of the change.** Every new feature or bugfix MUST ship with the matching tests: unit tests for pure logic (`utils/`, schemas), integration tests for API behaviour (controller + service over HTTP), component tests for non-trivial UI logic, and an e2e journey when a user-facing flow changes.
+- **Definition of done.** Before declaring any task complete, ALL tests (`pnpm test`, plus `pnpm test:e2e` for user-facing changes) and ALL builds (`pnpm build`) MUST pass cleanly, together with `pnpm lint` and `pnpm format:check`. Report failures honestly; never skip, `.skip` or delete a failing test to get green.
+- **README is a deliverable.** On every functional change, review `README.md`. If API routes, CLI commands, architecture, test setup or features change, `README.md` MUST be updated within the same task.
+- **Test real contracts, not mocks.** Assert observable behaviour (status codes, persisted state, rendered output, request payloads, SQL predicates and bound parameters), not a single hard-coded return value stubbed to make an assertion pass. Mock only true external boundaries (OpenAI/Anthropic SDKs, `fetch`, the browser network) and keep those fakes behaviour-faithful (see `apps/api/src/test/fake-prisma.ts`).
+- **Layout and tooling.**
+  - API: Vitest + SWC (decorator metadata) + Supertest; specs live next to the code as `*.spec.ts`; shared fixtures/fakes in `apps/api/src/test/`.
+  - Web: Vitest + jsdom + Testing Library; specs live next to the code as `*.test.ts(x)`; shared fixtures, fetch fake and render helper in `apps/web/test/`.
+  - E2E: Playwright in `apps/e2e` (`tests/`, `utils/`, `constants.ts`). Use resilient, user-facing locators (`getByRole`, `getByText`, `getByLabel`), never CSS or DOM-structure selectors. Journeys that write data use distinct alumni because the e2e database is shared per run.
+  - Tests follow the same rules as production code: constants and helpers are shared, not duplicated.
+
 ## Testing & Quality Gate
 
 - Run `typecheck` and `lint` on modified packages before finalizing any feature.

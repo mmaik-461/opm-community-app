@@ -1,0 +1,16 @@
+{
+  "name": "e2e",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@opm/shared-types": "workspace:^",
+    "@opm/tsconfig": "workspace:^",
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  }
+}

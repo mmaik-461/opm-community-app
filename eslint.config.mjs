@@ -11,6 +11,9 @@ export default tseslint.config(
     ignores: [
       '**/dist/**',
       '**/.next/**',
+      '**/.next-e2e/**',
+      '**/playwright-report/**',
+      '**/test-results/**',
       '**/node_modules/**',
       '**/coverage/**',
       '**/build/**',

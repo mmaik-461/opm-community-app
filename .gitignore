@@ -4,6 +4,7 @@ node_modules/
 
 # Builds and framework artifacts
 .next/
+.next-e2e/
 dist/
 build/
 out/
@@ -30,5 +31,7 @@ pnpm-debug.log*
 # Tests and coverage
 coverage/
 .nyc_output/
+playwright-report/
+test-results/
 # TypeScript incremental build info
 *.tsbuildinfo

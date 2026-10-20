@@ -58,14 +58,15 @@ indexes: (requesterId), (targetId, status)
 
 ## Tech stack
 
-| Layer    | Choice                                                                              |
-| -------- | ----------------------------------------------------------------------------------- |
-| Monorepo | Turborepo, pnpm workspaces                                                          |
-| Web      | Next.js 14 (App Router), React 18, Tailwind CSS v4, Radix UI (shadcn/ui components) |
-| API      | NestJS, Prisma ORM, Zod validation pipes                                            |
-| Database | PostgreSQL 16 + pgvector (Docker Compose)                                           |
-| AI       | OpenAI `text-embedding-3-small`, Anthropic Claude                                   |
-| Language | TypeScript (strict)                                                                 |
+| Layer    | Choice                                                                                          |
+| -------- | ----------------------------------------------------------------------------------------------- |
+| Monorepo | Turborepo, pnpm workspaces                                                                      |
+| Web      | Next.js 14 (App Router), React 18, Tailwind CSS v4, Radix UI (shadcn/ui components)             |
+| API      | NestJS, Prisma ORM, Zod validation pipes                                                        |
+| Database | PostgreSQL 16 + pgvector (Docker Compose)                                                       |
+| AI       | OpenAI `text-embedding-3-small`, Anthropic Claude                                               |
+| Language | TypeScript (strict)                                                                             |
+| Testing  | Vitest (+ SWC, Supertest) for the API, Vitest + Testing Library for the web, Playwright for e2e |
 
 ```
 apps/web                Next.js frontend
@@ -73,6 +74,7 @@ apps/web                Next.js frontend
   constants/            Static options, copy, class tokens and limits
   utils/                Pure helper functions
   lib/                  API client and shadcn `cn` helper
+apps/e2e                Playwright end-to-end journeys (own API + web servers, isolated database)
 apps/api                NestJS backend (profiles, matchmaking, intros modules)
   src/common/constants  Limits, prompts, Prisma selects
   src/common/utils      Shared helpers (pagination, prompt tags, vectors, env)
@@ -111,7 +113,21 @@ The frontend reads the API from `NEXT_PUBLIC_API_URL` (default `http://localhost
 
 **Seed embeddings:** with `OPENAI_API_KEY` set, the seed stores real `text-embedding-3-small` vectors. Without it, it falls back to a deterministic hashed bag-of-words vector (same 1536 dims) so the database is always populated. Query embeddings come from OpenAI, so seed with `OPENAI_API_KEY` set for semantically comparable vectors.
 
-Quality gates: `pnpm --filter web typecheck`, `pnpm --filter api typecheck`, `pnpm lint` (strict TypeScript compilation across the workspace), `pnpm build`.
+Quality gates: `pnpm --filter web typecheck`, `pnpm --filter api typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build`, `pnpm test` and (for user-facing changes) `pnpm test:e2e`.
+
+The API reads `WEB_ORIGIN` (default `http://localhost:3000`) for its CORS allow-list; the web build reads `NEXT_DIST_DIR` (default `.next`) so the e2e build never clobbers a running dev server.
+
+## Testing
+
+| Command         | What it runs                                                                                     |
+| --------------- | ------------------------------------------------------------------------------------------------ |
+| `pnpm test`     | Unit + integration tests for `apps/api` and `apps/web` (Turborepo; builds `shared-types` first). |
+| `pnpm test:e2e` | Playwright journeys in `apps/e2e`.                                                               |
+| `pnpm test:all` | Both of the above.                                                                               |
+
+- **API (`apps/api`, Vitest + SWC + Supertest).** `intros.spec.ts` drives `IntrosController` and `IntrosService` over HTTP against a stateful in-memory Prisma fake (`src/test/fake-prisma.ts`): self-request `400`, duplicate `409` (both directions), unauthorised status change `403`, pagination math and independent sent/received pages, and the pending-incoming count. `matchmaking.spec.ts` covers `MatchmakingService` with the OpenAI/Anthropic SDKs faked: strict case-insensitive city predicate, requester exclusion, travel-context injection into the prompt, fallback embedding text for an empty or generic query, and invented/duplicate id handling. Shared helpers (`pagination`, `prompt`, `vector`, `env`, Zod pipe) have their own unit tests.
+- **Web (`apps/web`, Vitest + jsdom + Testing Library).** Tests for `utils/`, the `Directory` filter groups and debounced search, `MatchCard` (mutual synergy callout, copy/email/LinkedIn actions, request flow) and the intro `Dialog` (edit, submit, server error, cancel/Escape, draft reset). Components run with the real providers and API client; only `fetch` is faked.
+- **E2E (`apps/e2e`, Playwright).** Journeys: Alumni Directory (city/industry filters, debounced search, layout-shift budget via `PerformanceObserver`), Matchmaker (search, Travel Mode, in-person icebreakers) and the Intro closed loop (A requests B → switch to B → header badge → accept → back to A sees `ACCEPTED`). Playwright starts its own API (`:4100`) and web (`:3100`, built into `.next-e2e`) and prepares the isolated `opm_community_e2e` database (migrate, truncate, seed) on each run, so Docker Postgres (`docker compose up -d`) must be running. `OPENAI_API_KEY` and `ANTHROPIC_API_KEY` are blanked for the run: the seed uses deterministic embeddings and `POST /matchmaking` is stubbed at the browser network layer (the LLM pipeline is covered by the API tests). First-time setup: `pnpm --filter e2e exec playwright install chromium`.
 
 ## Engineering highlights
 
@@ -139,3 +155,4 @@ Quality gates: `pnpm --filter web typecheck`, `pnpm --filter api typecheck`, `pn
 - [ ] Alumni Directory: filters and debounced search work; a no-match search shows "No alumni match your filters" at the same width and height as the populated grid.
 - [ ] Resize to 375 px, 768 px, and 1280 px: no horizontal scroll; grids use 1 / 2 / 3 columns.
 - [ ] `pnpm --filter web typecheck` and `pnpm --filter web build` pass.
+- [ ] `pnpm test` and `pnpm test:e2e` pass.
