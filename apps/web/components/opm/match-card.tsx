@@ -1,0 +1,144 @@
+'use client';
+
+import * as React from 'react';
+import { Check, Copy, ExternalLink, Lightbulb, Mail, MapPin, Sparkles } from 'lucide-react';
+import type { MatchResult } from '@opm/shared-types';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { initials, labelClass, travelLabel } from './profile-utils';
+
+function toPercent(score: number): number {
+  const pct = score <= 1 ? score * 100 : score;
+  return Math.max(0, Math.min(100, Math.round(pct)));
+}
+
+function safeHttpUrl(url: string | null): string | null {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    return u.protocol === 'https:' || u.protocol === 'http:' ? u.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = React.useState(false);
+  const [failed, setFailed] = React.useState(false);
+  const timer = React.useRef<ReturnType<typeof setTimeout>>();
+
+  React.useEffect(() => () => clearTimeout(timer.current), []);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setFailed(false);
+    } catch {
+      setFailed(true);
+    }
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      setCopied(false);
+      setFailed(false);
+    }, 2000);
+  }
+
+  return (
+    <Button
+      type="button"
+      size="sm"
+      variant={copied ? 'default' : 'outline'}
+      onClick={copy}
+      className={copied ? 'bg-emerald-600 text-white hover:bg-emerald-600' : undefined}
+      aria-live="polite"
+    >
+      {copied ? <Check /> : <Copy />}
+      {copied ? 'Copied!' : failed ? 'Copy failed' : 'Copy Message'}
+    </Button>
+  );
+}
+
+export function MatchCard({ match, rank }: { match: MatchResult; rank: number }) {
+  const { profile } = match;
+  const pct = toPercent(match.similarityScore);
+  const linkedin = safeHttpUrl(profile.linkedinUrl);
+  const mailto = profile.email
+    ? `mailto:${profile.email}?subject=${encodeURIComponent('Connecting via OPM Community')}&body=${encodeURIComponent(match.suggestedIcebreaker)}`
+    : null;
+
+  return (
+    <Card className="gap-5 border border-zinc-200 bg-white p-5 shadow-none ring-0 transition-all duration-200 hover:border-zinc-300 hover:shadow-sm sm:p-6">
+      <div className="flex items-start gap-4">
+        <Avatar className="size-12">
+          {profile.avatarUrl && <AvatarImage src={profile.avatarUrl} alt="" />}
+          <AvatarFallback className="bg-zinc-900 text-sm font-medium text-white">
+            {initials(profile.fullName)}
+          </AvatarFallback>
+        </Avatar>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className={labelClass}>#{rank}</span>
+            <h3 className="text-lg font-semibold tracking-tight text-zinc-900">
+              {profile.fullName}
+            </h3>
+            <Badge variant="outline" className="border-zinc-300 text-zinc-700">
+              {profile.cohort}
+            </Badge>
+          </div>
+          <p className="mt-0.5 text-sm text-zinc-600">{profile.headline}</p>
+          <p className="mt-1.5 flex items-center gap-1.5 text-sm text-zinc-500">
+            <MapPin className="size-3.5" aria-hidden />
+            {travelLabel(profile.travelStatus)} {profile.city}
+            <span aria-hidden>·</span>
+            {profile.industry}
+          </p>
+        </div>
+        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800">
+          <span className="size-1.5 rounded-full bg-emerald-500" aria-hidden />
+          {pct}% Match
+        </span>
+      </div>
+
+      <div className="rounded-lg border border-indigo-100 bg-indigo-50/70 p-4">
+        <p className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold tracking-wider text-indigo-700 uppercase">
+          <Sparkles className="size-3.5" aria-hidden /> Why this match
+        </p>
+        <p className="text-sm leading-relaxed text-zinc-800">{match.matchReason}</p>
+      </div>
+
+      <div>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <p className={`${labelClass} flex items-center gap-1.5`}>
+            <Lightbulb className="size-3.5" aria-hidden /> Suggested icebreaker
+          </p>
+          <CopyButton text={match.suggestedIcebreaker} />
+        </div>
+        <blockquote className="border-l-2 border-zinc-900 bg-zinc-50 py-3 pr-4 pl-4 text-sm leading-relaxed text-zinc-700 italic">
+          {match.suggestedIcebreaker}
+        </blockquote>
+      </div>
+
+      {(mailto || linkedin) && (
+        <div className="flex flex-wrap gap-2">
+          {mailto && (
+            <Button asChild variant="outline" size="sm">
+              <a href={mailto}>
+                <Mail /> Email
+              </a>
+            </Button>
+          )}
+          {linkedin && (
+            <Button asChild variant="outline" size="sm">
+              <a href={linkedin} target="_blank" rel="noopener noreferrer">
+                <ExternalLink /> LinkedIn
+              </a>
+            </Button>
+          )}
+        </div>
+      )}
+    </Card>
+  );
+}

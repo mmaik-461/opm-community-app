@@ -1,15 +1,17 @@
 import type { Metadata } from 'next';
+import { GeistSans } from 'geist/font/sans';
 import './globals.css';
+import { cn } from '@/lib/utils';
 
 export const metadata: Metadata = {
-  title: 'OPM Community',
+  title: 'OPM Community Hub',
   description: 'Ask the community. Get matched with the right alumni.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen bg-white text-slate-900 antialiased">{children}</body>
+    <html lang="en" className={cn('font-sans', GeistSans.variable)}>
+      <body className="min-h-screen bg-zinc-50 text-zinc-900 antialiased">{children}</body>
     </html>
   );
 }
