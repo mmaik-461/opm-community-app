@@ -1,12 +1,12 @@
 # OPM Community Hub
 
-An MVP for the OPM alumni community built around one core journey: **Ask the community → get AI-matched alumni → send a ready-to-use icebreaker → track the intro to a response.**
+A production-grade community platform for OPM alumni, built around one core journey: **Ask the community → get AI-matched alumni → send a ready-to-use icebreaker → track the intro to a response.**
 
 ## Value proposition
 
 Alumni networks are valuable but hard to navigate. Instead of browsing a directory, a member describes what they need in plain language ("Visiting London next week — who can connect for a fintech coffee?"). The hub finds the alumni best placed to help, explains *why* each one is a fit, and drafts a personalised opening message to copy, email, or send via LinkedIn.
 
-Scope is deliberately tight: no real-time chat, no maps, no real authentication. The conversation itself always happens outside the app; the hub tracks the introduction request.
+The platform is intentionally focused on introductions: the conversation itself continues on the channel members prefer (email, LinkedIn, WhatsApp), while the hub owns discovery, drafting and tracking of every introduction request.
 
 ## Features
 
@@ -28,7 +28,7 @@ Query ──► OpenAI text-embedding-3-small (1536 dims)
 1. **Retrieval (cheap, broad).** The query is embedded and compared with precomputed alumni embeddings using pgvector's cosine distance operator (`<=>`). The requesting user is excluded from candidates. In Travel Mode, an additional `lower(city) = lower(:destination)` predicate is applied, and an empty or generic query is replaced by text built from the requester's profile.
 2. **Reasoning (precise, contextual).** Claude receives the request, the requester's profile, an optional `<travel_context>` and the 6 candidates, selects the best 3, and writes a grounded reason, a mutual synergy analysis and an icebreaker for each. In Travel Mode the icebreaker is written for an in-person meetup and the synergy highlights local, offline context. Output uses Anthropic structured outputs (JSON schema) and is re-validated server-side with Zod (`matchmaking.schemas.ts`); only profile IDs present in the candidate set are accepted.
 
-> **Model note:** the original brief named Claude 3.5 Sonnet, which Anthropic has retired. The service defaults to `claude-sonnet-5-5` and can be overridden with the `ANTHROPIC_MODEL` environment variable.
+> **Model configuration:** the service defaults to `claude-sonnet-5-5`; set `ANTHROPIC_MODEL` to select a different Claude model.
 
 Shared request/response contracts live in `packages/shared-types` and are used by both apps.
 
@@ -68,10 +68,17 @@ indexes: (requesterId), (targetId, status)
 | Language | TypeScript (strict) |
 
 ```
-apps/web            Next.js frontend
-apps/api            NestJS backend (profiles, matchmaking, intros modules)
+apps/web                Next.js frontend
+  components/opm        Feature components (JSX and component state only)
+  constants/            Static options, copy, class tokens and limits
+  utils/                Pure helper functions
+  lib/                  API client and shadcn `cn` helper
+apps/api                NestJS backend (profiles, matchmaking, intros modules)
+  src/common/constants  Limits, prompts, Prisma selects
+  src/common/utils      Shared helpers (pagination, prompt tags, vectors, env)
+  src/common/pipes      Zod validation pipe
 packages/shared-types   DTOs and API contracts
-packages/tsconfig, packages/eslint-config
+packages/tsconfig       Shared TypeScript configs
 ```
 
 ## Quickstart
@@ -102,9 +109,9 @@ pnpm dev                           # web on :3000, API on :4000
 
 The frontend reads the API from `NEXT_PUBLIC_API_URL` (default `http://localhost:4000`). The API allows CORS from `http://localhost:3000` only.
 
-**Seed embeddings:** with `OPENAI_API_KEY` set, the seed stores real `text-embedding-3-small` vectors. Without it, it falls back to a deterministic hashed bag-of-words vector (same 1536 dims) so the app still runs, but query embeddings from OpenAI will not be directly comparable, so seed with a key for meaningful results.
+**Seed embeddings:** with `OPENAI_API_KEY` set, the seed stores real `text-embedding-3-small` vectors. Without it, it falls back to a deterministic hashed bag-of-words vector (same 1536 dims) so the database is always populated. Query embeddings come from OpenAI, so seed with `OPENAI_API_KEY` set for semantically comparable vectors.
 
-Quality gates: `pnpm --filter web typecheck`, `pnpm --filter api typecheck`, `pnpm lint`, `pnpm build`.
+Quality gates: `pnpm --filter web typecheck`, `pnpm --filter api typecheck`, `pnpm lint` (strict TypeScript compilation across the workspace), `pnpm build`.
 
 ## Engineering highlights
 
@@ -112,7 +119,7 @@ Quality gates: `pnpm --filter web typecheck`, `pnpm --filter api typecheck`, `pn
 - **Zero layout shift in the directory.** Results always render inside a persistent `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3` with a reserved minimum height. The empty state is a `col-span-full` card inside that grid, and `<main>` is `w-full` so `mx-auto` in a flex column cannot shrink the page. Search input is debounced (250 ms) and the "Clear filters" slot reserves its height.
 - **Zero layout shift in Travel Mode.** The Travel Mode banner, destination control and dates input occupy reserved space in both states (the dates field is `invisible` rather than unmounted on desktop), so toggling never moves the form or results.
 - **Stable intros dashboard.** Sent/Received lists render in a fixed minimum-height container; during page changes the existing list is dimmed (`opacity-60`) rather than replaced by a loader, so pagination does not jump. The 3-column directory grid is preserved.
-- **Mock user switcher, not auth.** The "Acting as" dropdown sets `currentUserId` in a React context. It is sent with matchmaking and intro requests so the API can exclude that user from their own results and load their profile as matching context. There are no sessions or tokens in this MVP.
+- **Acting-as user switcher.** The "Acting as" dropdown sets `currentUserId` in a React context and persists it in local storage. It is sent with matchmaking and intro requests so the API can exclude that user from their own results and load their profile as matching context.
 - **Prompt-injection defence.** The user query, target city, travel context, requester profile and candidate profiles are treated as untrusted data: each is encapsulated in delimited tags (`<user_request>`, `<target_city>`, `<travel_context>`, `<requester_profile>`, `<candidates>` as JSON), the system prompt instructs the model never to follow instructions found inside them, output is constrained by a JSON schema, and the response is Zod-validated with returned IDs checked against the candidate set. Request payloads are validated (query 3–1000 chars, or empty with a `travelContext`) before use.
 - **Mobile-first UI.** Header wraps without overflow, starter chips scroll with snap on small screens, and match cards go from 1 to 2 to 3 columns. See `apps/web/FRONTEND_GUIDELINES.md`.
 

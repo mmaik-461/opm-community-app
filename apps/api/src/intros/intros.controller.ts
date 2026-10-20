@@ -5,7 +5,7 @@ import type {
   IntrosResponse,
   UpdateIntroStatusDto,
 } from '@opm/shared-types';
-import { ZodValidationPipe } from '../matchmaking/zod-validation.pipe';
+import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { IntrosService } from './intros.service';
 import {
   createIntroSchema,

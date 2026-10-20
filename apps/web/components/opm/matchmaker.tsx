@@ -17,30 +17,25 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { fetchMatches } from '@/lib/api';
 import { MatchCard } from './match-card';
-import { labelClass } from './profile-utils';
+import {
+  ANY_CITY,
+  LOADING_STAGES,
+  MATCH_DISPLAY_LIMIT,
+  MAX_DATES_LENGTH,
+  MAX_QUERY_LENGTH,
+  STAGE_ADVANCE_DELAY_MS,
+  STARTER_QUERIES,
+  type MatchmakerStatus,
+} from '@/constants/matchmaker';
+import { LABEL_CLASS } from '@/constants/ui';
+import { errorMessage } from '@/utils/errors';
 import { useUser } from './user-context';
-
-const STARTERS = [
-  'Series A Fundraising',
-  'Fintech in London',
-  'B2B SaaS Growth',
-  'CleanTech in Berlin',
-];
-
-const STAGES = [
-  'Querying semantic community embeddings...',
-  'Generating personalized icebreakers with Claude...',
-];
-
-const ANY_CITY = '__any__';
-
-type Status = 'idle' | 'loading' | 'done' | 'error';
 
 function LoadingState({ stage }: { stage: number }) {
   return (
     <div className="space-y-4" role="status" aria-live="polite">
       <ol className="flex flex-col gap-2 text-sm sm:flex-row sm:gap-6">
-        {STAGES.map((label, i) => (
+        {LOADING_STAGES.map((label, i) => (
           <li
             key={label}
             className={`flex items-center gap-2 ${i <= stage ? 'text-zinc-900' : 'text-zinc-400'}`}
@@ -86,7 +81,7 @@ export function Matchmaker() {
   const [city, setCity] = React.useState(ANY_CITY);
   const [travelMode, setTravelMode] = React.useState(false);
   const [dates, setDates] = React.useState('');
-  const [status, setStatus] = React.useState<Status>('idle');
+  const [status, setStatus] = React.useState<MatchmakerStatus>('idle');
   const [stage, setStage] = React.useState(0);
   const [matches, setMatches] = React.useState<MatchResult[]>([]);
   const [error, setError] = React.useState<string | null>(null);
@@ -129,7 +124,7 @@ export function Matchmaker() {
     setStage(0);
     setError(null);
     setSearched(q || `Meetups in ${travelCity}`);
-    stageTimer.current = setTimeout(() => setStage(1), 1800);
+    stageTimer.current = setTimeout(() => setStage(1), STAGE_ADVANCE_DELAY_MS);
 
     try {
       const res = await fetchMatches(
@@ -149,12 +144,12 @@ export function Matchmaker() {
         throw new Error('Received an unexpected response from the matchmaking service.');
       }
       if (ctrl.signal.aborted) return;
-      setMatches(list.slice(0, 3));
+      setMatches(list.slice(0, MATCH_DISPLAY_LIMIT));
       setStatus('done');
     } catch (err) {
       if (ctrl.signal.aborted) return;
       console.error('[matchmaker] Matchmaking request failed', err);
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+      setError(errorMessage(err, 'Something went wrong'));
       setStatus('error');
     } finally {
       clearTimeout(stageTimer.current);
@@ -169,7 +164,7 @@ export function Matchmaker() {
   return (
     <div className="space-y-10">
       <section className="mx-auto max-w-3xl text-center">
-        <p className={labelClass}>AI Matchmaker</p>
+        <p className={LABEL_CLASS}>AI Matchmaker</p>
         <h2 className="mt-2 text-3xl font-semibold tracking-tight text-zinc-900 sm:text-4xl">
           Ask the community
         </h2>
@@ -195,7 +190,7 @@ export function Matchmaker() {
                 void search(query);
               }
             }}
-            maxLength={1000}
+            maxLength={MAX_QUERY_LENGTH}
             rows={4}
             placeholder={
               travelCity
@@ -253,7 +248,7 @@ export function Matchmaker() {
               <Input
                 value={dates}
                 onChange={(e) => setDates(e.target.value)}
-                maxLength={100}
+                maxLength={MAX_DATES_LENGTH}
                 aria-label="Travel dates (optional)"
                 placeholder="Dates, e.g. Next week or Nov 14-18"
                 tabIndex={travelMode ? 0 : -1}
@@ -273,7 +268,7 @@ export function Matchmaker() {
         </form>
 
         <div className="mt-4 flex flex-wrap justify-center gap-2 max-sm:-mx-4 max-sm:flex-nowrap max-sm:justify-start max-sm:snap-x max-sm:overflow-x-auto max-sm:px-4 max-sm:pb-2">
-          {STARTERS.map((s) => (
+          {STARTER_QUERIES.map((s) => (
             <button
               key={s}
               type="button"
@@ -323,7 +318,7 @@ export function Matchmaker() {
 
         {status === 'done' && matches.length > 0 && (
           <div className="space-y-4">
-            <p className={`${labelClass} break-words`}>
+            <p className={`${LABEL_CLASS} break-words`}>
               Top {matches.length} for &ldquo;{searched}&rdquo;
             </p>
             <div className="flex w-full flex-col gap-4">

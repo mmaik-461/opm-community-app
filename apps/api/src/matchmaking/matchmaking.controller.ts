@@ -2,7 +2,7 @@ import { Body, Controller, HttpCode, Post } from '@nestjs/common';
 import type { MatchmakingRequest, MatchmakingResponse } from '@opm/shared-types';
 import { MatchmakingService } from './matchmaking.service';
 import { matchmakingRequestSchema } from './matchmaking.schemas';
-import { ZodValidationPipe } from './zod-validation.pipe';
+import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 
 @Controller('matchmaking')
 export class MatchmakingController {

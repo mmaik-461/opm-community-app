@@ -2,56 +2,35 @@
 
 import * as React from 'react';
 import { Search, UsersRound, X } from 'lucide-react';
-import type { Profile } from '@opm/shared-types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ProfileCard } from './profile-card';
-import { labelClass } from './profile-utils';
+import { DIRECTORY_SKELETON_COUNT, EMPTY_FILTERS, FILTER_GROUPS, SEARCH_DEBOUNCE_MS, type FilterKey, type Filters } from '@/constants/directory';
+import { LABEL_CLASS } from '@/constants/ui';
+import { matchesSearch, uniqueValues } from '@/utils/profile';
 import { useUser } from './user-context';
-
-type FilterKey = 'city' | 'cohort' | 'industry';
-type Filters = Record<FilterKey, string | null>;
-
-const GROUPS: { key: FilterKey; label: string }[] = [
-  { key: 'city', label: 'City' },
-  { key: 'cohort', label: 'Cohort' },
-  { key: 'industry', label: 'Industry' },
-];
-
-function unique(profiles: Profile[], key: FilterKey): string[] {
-  return Array.from(new Set(profiles.map((p) => p[key]))).sort((a, b) =>
-    a.localeCompare(b, undefined, { numeric: true }),
-  );
-}
 
 export function Directory() {
   const { profiles, loading, error } = useUser();
   const [search, setSearch] = React.useState('');
   const [debouncedSearch, setDebouncedSearch] = React.useState('');
-  const [filters, setFilters] = React.useState<Filters>({
-    city: null,
-    cohort: null,
-    industry: null,
-  });
+  const [filters, setFilters] = React.useState<Filters>(EMPTY_FILTERS);
 
   React.useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(search), 250);
+    const t = setTimeout(() => setDebouncedSearch(search), SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(t);
   }, [search]);
 
   const filtered = React.useMemo(() => {
     const q = debouncedSearch.trim().toLowerCase();
     return profiles.filter((p) => {
-      if (GROUPS.some(({ key }) => filters[key] && p[key] !== filters[key])) return false;
-      if (!q) return true;
-      return [p.fullName, p.headline, p.city, p.cohort, p.industry, ...p.skills].some((v) =>
-        v.toLowerCase().includes(q),
-      );
+      if (FILTER_GROUPS.some(({ key }) => filters[key] && p[key] !== filters[key])) return false;
+      return !q || matchesSearch(p, q);
     });
   }, [profiles, debouncedSearch, filters]);
 
-  const active = GROUPS.some(({ key }) => filters[key]) || search !== '';
+  const active = FILTER_GROUPS.some(({ key }) => filters[key]) || search !== '';
 
   function toggle(key: FilterKey, value: string) {
     setFilters((f) => ({ ...f, [key]: f[key] === value ? null : value }));
@@ -60,13 +39,13 @@ export function Directory() {
   function reset() {
     setSearch('');
     setDebouncedSearch('');
-    setFilters({ city: null, cohort: null, industry: null });
+    setFilters(EMPTY_FILTERS);
   }
 
   return (
     <div className="space-y-6">
       <div>
-        <p className={labelClass}>Alumni Directory</p>
+        <p className={LABEL_CLASS}>Alumni Directory</p>
         <h2 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-900">
           {loading ? 'Loading…' : `${filtered.length} of ${profiles.length} alumni`}
         </h2>
@@ -86,11 +65,11 @@ export function Directory() {
             className="h-10 pl-9"
           />
         </div>
-        {GROUPS.map(({ key, label }) => (
+        {FILTER_GROUPS.map(({ key, label }) => (
           <div key={key} className="flex flex-col gap-2 sm:flex-row sm:items-start">
-            <span className={`${labelClass} pt-1.5 sm:w-20 sm:shrink-0`}>{label}</span>
+            <span className={`${LABEL_CLASS} pt-1.5 sm:w-20 sm:shrink-0`}>{label}</span>
             <div className="flex flex-wrap gap-1.5">
-              {unique(profiles, key).map((v) => {
+              {uniqueValues(profiles, key).map((v) => {
                 const on = filters[key] === v;
                 return (
                   <button
@@ -127,7 +106,7 @@ export function Directory() {
 
       <div className="grid min-h-[36rem] w-full content-start grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {loading ? (
-          Array.from({ length: 6 }, (_, i) => (
+          Array.from({ length: DIRECTORY_SKELETON_COUNT }, (_, i) => (
             <Skeleton key={i} className="h-44 rounded-xl" />
           ))
         ) : filtered.length === 0 ? (

@@ -7,24 +7,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { initials, labelClass, travelLabel } from './profile-utils';
+import { COPY_FEEDBACK_MS } from '@/constants/matchmaker';
+import { LABEL_CLASS, PRIMARY_BUTTON_CLASS } from '@/constants/ui';
+import { toPercent } from '@/utils/format';
+import { initials, travelLabel } from '@/utils/profile';
+import { buildMailto, safeHttpUrl } from '@/utils/url';
 import { RequestIntroDialog } from './request-intro-dialog';
 import { useUser } from './user-context';
-
-function toPercent(score: number): number {
-  const pct = score <= 1 ? score * 100 : score;
-  return Math.max(0, Math.min(100, Math.round(pct)));
-}
-
-function safeHttpUrl(url: string | null): string | null {
-  if (!url) return null;
-  try {
-    const u = new URL(url);
-    return u.protocol === 'https:' || u.protocol === 'http:' ? u.toString() : null;
-  } catch {
-    return null;
-  }
-}
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = React.useState(false);
@@ -45,7 +34,7 @@ function CopyButton({ text }: { text: string }) {
     timer.current = setTimeout(() => {
       setCopied(false);
       setFailed(false);
-    }, 2000);
+    }, COPY_FEEDBACK_MS);
   }
 
   return (
@@ -71,9 +60,7 @@ export function MatchCard({ match, rank, query }: { match: MatchResult; rank: nu
   const isSelf = currentUser?.id === profile.id;
   const pct = toPercent(match.similarityScore);
   const linkedin = safeHttpUrl(profile.linkedinUrl);
-  const mailto = profile.email
-    ? `mailto:${profile.email}?subject=${encodeURIComponent('Connecting via OPM Community')}&body=${encodeURIComponent(match.suggestedIcebreaker)}`
-    : null;
+  const mailto = buildMailto(profile.email, match.suggestedIcebreaker);
 
   return (
     <Card className="gap-5 border border-zinc-200 bg-white p-5 shadow-none ring-0 transition-all duration-200 hover:border-zinc-300 hover:shadow-sm sm:p-6">
@@ -86,7 +73,7 @@ export function MatchCard({ match, rank, query }: { match: MatchResult; rank: nu
         </Avatar>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span className={labelClass}>#{rank}</span>
+            <span className={LABEL_CLASS}>#{rank}</span>
             <h3 className="text-lg font-semibold tracking-tight text-zinc-900">
               {profile.fullName}
             </h3>
@@ -126,7 +113,7 @@ export function MatchCard({ match, rank, query }: { match: MatchResult; rank: nu
 
       <div>
         <div className="mb-2 flex items-center justify-between gap-2">
-          <p className={`${labelClass} flex items-center gap-1.5`}>
+          <p className={`${LABEL_CLASS} flex items-center gap-1.5`}>
             <Lightbulb className="size-3.5" aria-hidden /> Suggested icebreaker
           </p>
         </div>
@@ -141,7 +128,7 @@ export function MatchCard({ match, rank, query }: { match: MatchResult; rank: nu
           size="sm"
           disabled={requested || isSelf || !currentUser}
           onClick={() => setDialogOpen(true)}
-          className="bg-zinc-900 text-white hover:bg-zinc-800"
+          className={PRIMARY_BUTTON_CLASS}
         >
           {requested ? <Check /> : <Send />}
           {requested ? 'Intro Requested' : 'Request Intro'}

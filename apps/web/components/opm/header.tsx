@@ -14,7 +14,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useIntros } from './intros-context';
-import { initials } from './profile-utils';
+import { initials } from '@/utils/profile';
 import { useUser } from './user-context';
 
 export function Header() {
@@ -86,7 +86,7 @@ export function Header() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="max-h-80 w-72 overflow-y-auto">
               <DropdownMenuLabel className="text-xs font-semibold tracking-wider text-zinc-500 uppercase">
-                Mock user switcher
+                Switch acting user
               </DropdownMenuLabel>
               {profiles.map((p) => (
                 <DropdownMenuItem key={p.id} onSelect={() => setCurrentUserId(p.id)}>

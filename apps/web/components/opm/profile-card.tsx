@@ -3,7 +3,8 @@ import type { Profile } from '@opm/shared-types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { initials, labelClass, travelLabel } from './profile-utils';
+import { LABEL_CLASS } from '@/constants/ui';
+import { initials, travelLabel } from '@/utils/profile';
 
 export function ProfileCard({ profile }: { profile: Profile }) {
   const traveling = profile.travelStatus === 'TRAVELING_TO';
@@ -39,7 +40,7 @@ export function ProfileCard({ profile }: { profile: Profile }) {
           </span>{' '}
           {profile.city}
         </span>
-        <span className={labelClass}>{profile.industry}</span>
+        <span className={LABEL_CLASS}>{profile.industry}</span>
       </div>
 
       {profile.skills.length > 0 && (

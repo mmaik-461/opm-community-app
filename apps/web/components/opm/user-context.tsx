@@ -2,9 +2,9 @@
 
 import * as React from 'react';
 import type { Profile } from '@opm/shared-types';
+import { CURRENT_USER_STORAGE_KEY } from '@/constants/storage';
 import { fetchProfiles } from '@/lib/api';
-
-const STORAGE_KEY = 'opm.currentUserId';
+import { errorMessage } from '@/utils/errors';
 
 interface UserContextValue {
   profiles: Profile[];
@@ -33,7 +33,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         setProfiles(data);
         let stored: string | null = null;
         try {
-          stored = localStorage.getItem(STORAGE_KEY);
+          stored = localStorage.getItem(CURRENT_USER_STORAGE_KEY);
         } catch {
           /* storage unavailable */
         }
@@ -42,7 +42,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       })
       .catch((err: unknown) => {
         if (controller.signal.aborted) return;
-        setError(err instanceof Error ? err.message : 'Failed to load alumni');
+        setError(errorMessage(err, 'Failed to load alumni'));
         setLoading(false);
       });
     return () => controller.abort();
@@ -51,7 +51,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const setCurrentUserId = React.useCallback((id: string) => {
     setId(id);
     try {
-      localStorage.setItem(STORAGE_KEY, id);
+      localStorage.setItem(CURRENT_USER_STORAGE_KEY, id);
     } catch {
       /* storage unavailable */
     }

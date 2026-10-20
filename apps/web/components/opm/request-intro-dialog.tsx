@@ -16,7 +16,10 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { createIntro } from '@/lib/api';
 import { useIntros } from './intros-context';
-import { initials, labelClass, travelLabel } from './profile-utils';
+import { MAX_ICEBREAKER_LENGTH } from '@/constants/intros';
+import { LABEL_CLASS, PRIMARY_BUTTON_CLASS } from '@/constants/ui';
+import { errorMessage } from '@/utils/errors';
+import { firstName, initials, travelLabel } from '@/utils/profile';
 import { useUser } from './user-context';
 
 interface Props {
@@ -61,7 +64,7 @@ export function RequestIntroDialog({ open, onOpenChange, target, query, icebreak
       onSent();
       onOpenChange(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not send the intro request');
+      setError(errorMessage(err, 'Could not send the intro request'));
     } finally {
       setSubmitting(false);
     }
@@ -73,7 +76,7 @@ export function RequestIntroDialog({ open, onOpenChange, target, query, icebreak
         <DialogHeader>
           <DialogTitle>Request an intro</DialogTitle>
           <DialogDescription>
-            {target.fullName.split(' ')[0]} will see your message and can accept or decline.
+            {firstName(target.fullName)} will see your message and can accept or decline.
           </DialogDescription>
         </DialogHeader>
 
@@ -97,14 +100,14 @@ export function RequestIntroDialog({ open, onOpenChange, target, query, icebreak
         </div>
 
         <div>
-          <label htmlFor="intro-message" className={`${labelClass} mb-2 block`}>
+          <label htmlFor="intro-message" className={`${LABEL_CLASS} mb-2 block`}>
             Your message
           </label>
           <Textarea
             id="intro-message"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            maxLength={2000}
+            maxLength={MAX_ICEBREAKER_LENGTH}
             rows={6}
             className="resize-none text-sm"
           />
@@ -124,7 +127,7 @@ export function RequestIntroDialog({ open, onOpenChange, target, query, icebreak
           <Button
             onClick={() => void submit()}
             disabled={!canSubmit}
-            className="bg-zinc-900 text-white hover:bg-zinc-800"
+            className={PRIMARY_BUTTON_CLASS}
           >
             {submitting ? <Loader2 className="animate-spin" /> : <Send />}
             Send request

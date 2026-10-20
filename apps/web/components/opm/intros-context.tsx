@@ -2,7 +2,9 @@
 
 import * as React from 'react';
 import type { IntrosResponse, PaginatedIntros } from '@opm/shared-types';
+import { EMPTY_INTROS_RESPONSE } from '@/constants/intros';
 import { fetchIntros } from '@/lib/api';
+import { errorMessage } from '@/utils/errors';
 import { useUser } from './user-context';
 
 interface IntrosContextValue {
@@ -18,13 +20,10 @@ interface IntrosContextValue {
 
 const IntrosContext = React.createContext<IntrosContextValue | null>(null);
 
-const EMPTY_PAGE: PaginatedIntros = { data: [], meta: { total: 0, page: 1, totalPages: 1 } };
-const EMPTY: IntrosResponse = { sent: EMPTY_PAGE, received: EMPTY_PAGE, pendingIncoming: 0 };
-
 export function IntrosProvider({ children }: { children: React.ReactNode }) {
   const { currentUser } = useUser();
   const userId = currentUser?.id ?? null;
-  const [data, setData] = React.useState<IntrosResponse>(EMPTY);
+  const [data, setData] = React.useState<IntrosResponse>(EMPTY_INTROS_RESPONSE);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [receivedPage, setReceivedPage] = React.useState(1);
@@ -39,7 +38,7 @@ export function IntrosProvider({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     if (!userId) {
-      setData(EMPTY);
+      setData(EMPTY_INTROS_RESPONSE);
       return;
     }
     const controller = new AbortController();
@@ -61,7 +60,7 @@ export function IntrosProvider({ children }: { children: React.ReactNode }) {
       })
       .catch((err: unknown) => {
         if (controller.signal.aborted) return;
-        setError(err instanceof Error ? err.message : 'Failed to load intros');
+        setError(errorMessage(err, 'Failed to load intros'));
         setLoading(false);
       });
     return () => controller.abort();

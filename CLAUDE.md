@@ -1,8 +1,7 @@
 # OPM Community App — Claude Code Instructions
 
 ## Project Overview
-MVP for OPM alumni community focused on: "Ask Community + AI Matchmaking" (Semantic search via pgvector + Icebreaker generation).
-Timebox: 3 days. Focus on Core User Journey, avoid over-engineering.
+Production-grade platform for the OPM alumni community: "Ask Community + AI Matchmaking" (semantic search via pgvector, two-way contextual matching, icebreaker generation and a closed-loop intro workflow). The architecture is modular and extensible; every module ships complete, validated and typed.
 
 ## Tech Stack & Monorepo Layout
 - Monorepo: Turborepo + pnpm
@@ -13,7 +12,6 @@ Timebox: 3 days. Focus on Core User Journey, avoid over-engineering.
 - Packages:
   - `packages/shared-types`: Shared DTOs, schemas, and API contracts
   - `packages/tsconfig`: Shared TS configs
-  - `packages/eslint-config`: Shared linter configs
 - Language: TypeScript (strict mode throughout)
 
 ## Key Development Commands
@@ -34,14 +32,14 @@ Always execute commands using pnpm filters from the monorepo root:
   - Migrate dev: `pnpm --filter api prisma migrate dev`
   - Seed DB: `pnpm --filter api prisma db seed`
 
-## Architecture & MVP Constraints (Strict)
+## Architecture Principles (Strict)
 1. **Scope Boundaries:**
-   - NO real-time chat/WebSockets. Next action is external (LinkedIn / WhatsApp / Email) + AI Icebreaker generator.
-   - NO complex auth. Use a lightweight Mock User Switcher on the frontend.
-   - NO complex maps/GIS. Simple location chips and status ("Living in" / "Traveling to").
+   - Conversations continue on external channels (LinkedIn / WhatsApp / Email); the platform owns discovery, AI icebreaker generation and intro-request tracking. No real-time chat/WebSockets.
+   - Identity is provided by the frontend acting-as user switcher; the selected `currentUserId` is sent with matchmaking and intro requests.
+   - Location is modelled as city chips and a status ("Living in" / "Traveling to"); no GIS or map dependencies.
 2. **AI & Vector Search:**
-   - Reasoning & Generation: Anthropic Claude 3.5 Sonnet (via `@anthropic-ai/sdk` or Vercel AI SDK).
-   - Embeddings: OpenAI `text-embedding-3-small` (or local equivalent).
+   - Reasoning & Generation: Anthropic Claude via `@anthropic-ai/sdk` (default `claude-sonnet-5-5`, override with `ANTHROPIC_MODEL`).
+   - Embeddings: OpenAI `text-embedding-3-small`.
    - Database: PostgreSQL with `pgvector` (`cosine_distance` or `<=>`).
    - LLM responses must use structured outputs (JSON schema / Zod validation).
 3. **Data & Seams:**
@@ -53,10 +51,18 @@ Always execute commands using pnpm filters from the monorepo root:
   - Server Components by default; add `'use client'` only when state/interactivity is required.
   - UI components from shadcn/ui (`apps/web/components/ui`).
 - Backend:
-  - Modular structure (`modules/users`, `modules/matchmaking`, `modules/ai`).
+  - Modular structure by feature: `profiles/`, `matchmaking/`, `intros/`, `health/`, `prisma/`, plus `common/` for shared constants, utils and pipes.
   - Validation pipes with `class-validator` / `zod` for all incoming payloads.
   - Never run raw Prisma queries inside controllers; use service layers.
 
 ## Testing & Quality Gate
 - Run `typecheck` and `lint` on modified packages before finalizing any feature.
 - Ensure the seed script generates 20-30 realistic alumni profiles with precalculated embeddings.
+
+## Code Style & Architecture Guidelines
+- **Utilities:** all shared helper functions MUST live in `utils/` (`apps/web/utils/`, `apps/api/src/common/utils/`). Never define formatters, query builders, URL/string helpers or style helpers inline in components or services.
+- **Constants:** static constants, options, copy, class tokens, limits, prompts and configuration arrays MUST live in `constants/` (`apps/web/constants/`, `apps/api/src/common/constants/`).
+- **Components:** components focus strictly on JSX rendering and component-level reactive state. Data shaping, formatting and configuration are imported.
+- **No dead code:** never leave dead files, unused exports or inline magic constants. Delete what is no longer referenced.
+- **DRY and modular:** keep code reusable; extract any logic needed in more than one place instead of duplicating it.
+- **Imports:** web code uses the `@/` alias (`@/utils/...`, `@/constants/...`, `@/lib/...`).

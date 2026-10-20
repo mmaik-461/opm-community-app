@@ -7,8 +7,10 @@ import type {
   MatchmakingResponse,
   Profile,
 } from '@opm/shared-types';
+import { DEFAULT_API_URL } from '@/constants/api';
+import { buildQueryString, isAbortError } from '@/utils/api';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? DEFAULT_API_URL;
 
 export class ApiError extends Error {
   constructor(message: string, readonly status?: number) {
@@ -22,7 +24,7 @@ async function request<T>(path: string, init?: RequestInit, signal?: AbortSignal
   try {
     res = await fetch(`${API_URL}${path}`, { ...init, signal });
   } catch (err) {
-    if (err instanceof DOMException && err.name === 'AbortError') throw err;
+    if (isAbortError(err)) throw err;
     throw new ApiError(`Cannot reach the API at ${API_URL}. Is the backend running?`);
   }
   if (!res.ok) {
@@ -62,10 +64,10 @@ export function fetchIntros(
   pages: { receivedPage: number; sentPage: number },
   signal?: AbortSignal,
 ): Promise<IntrosResponse> {
-  const qs = new URLSearchParams({
+  const qs = buildQueryString({
     userId,
-    receivedPage: String(pages.receivedPage),
-    sentPage: String(pages.sentPage),
+    receivedPage: pages.receivedPage,
+    sentPage: pages.sentPage,
   });
   return request<IntrosResponse>(`/intros?${qs}`, undefined, signal);
 }

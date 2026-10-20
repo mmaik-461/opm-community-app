@@ -1,26 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
 import type { Profile, ProfileFilters } from '@opm/shared-types';
+import { PROFILE_SELECT } from '../common/constants/profiles';
+import { equalsInsensitive } from '../common/utils/prisma';
 import { PrismaService } from '../prisma/prisma.service';
-
-// `embedding` is an Unsupported() column, so Prisma never returns it; the select keeps that explicit.
-export const PROFILE_SELECT = {
-  id: true,
-  fullName: true,
-  headline: true,
-  bio: true,
-  city: true,
-  travelStatus: true,
-  cohort: true,
-  industry: true,
-  skills: true,
-  avatarUrl: true,
-  linkedinUrl: true,
-  email: true,
-} satisfies Prisma.ProfileSelect;
-
-const equalsInsensitive = (value?: string) =>
-  value ? { equals: value, mode: 'insensitive' as const } : undefined;
 
 @Injectable()
 export class ProfilesService {

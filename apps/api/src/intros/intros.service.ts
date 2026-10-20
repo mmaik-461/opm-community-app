@@ -15,7 +15,8 @@ import type {
 } from '@opm/shared-types';
 import { ListIntrosQuery } from './intros.schemas';
 import { PrismaService } from '../prisma/prisma.service';
-import { PROFILE_SELECT } from '../profiles/profiles.service';
+import { PROFILE_SELECT } from '../common/constants/profiles';
+import { buildPaginationMeta, pageOffset } from '../common/utils/pagination';
 
 const INTRO_INCLUDE = {
   requester: { select: PROFILE_SELECT },
@@ -84,13 +85,13 @@ export class IntrosService {
         where,
         include: INTRO_INCLUDE,
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-        skip: (page - 1) * limit,
+        skip: pageOffset(page, limit),
         take: limit,
       }),
     ]);
     return {
       data: data as unknown as IntroRequestResponse[],
-      meta: { total, page, totalPages: Math.max(1, Math.ceil(total / limit)) },
+      meta: buildPaginationMeta(total, page, limit),
     };
   }
 

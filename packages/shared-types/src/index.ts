@@ -25,7 +25,6 @@ export interface MatchmakingRequest {
   query: string;
   currentUserId?: string;
   targetCity?: string;
-  intent?: string;
   travelContext?: TravelContext;
 }
 
