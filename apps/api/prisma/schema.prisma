@@ -1,0 +1,35 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector]
+}
+
+enum TravelStatus {
+  LIVING_IN
+  TRAVELING_TO
+}
+
+model Profile {
+  id           String                      @id @default(uuid())
+  fullName     String
+  headline     String
+  bio          String
+  city         String
+  travelStatus TravelStatus                @default(LIVING_IN)
+  cohort       String
+  industry     String
+  skills       String[]
+  avatarUrl    String?
+  linkedinUrl  String?
+  email        String?                     @unique
+  embedding    Unsupported("vector(1536)")?
+  createdAt    DateTime                    @default(now())
+  updatedAt    DateTime                    @updatedAt
+
+  @@index([city])
+}
