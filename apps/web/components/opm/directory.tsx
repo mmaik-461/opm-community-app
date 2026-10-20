@@ -64,7 +64,7 @@ export function Directory() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="w-full min-w-full space-y-6">
       <div>
         <p className={labelClass}>Alumni Directory</p>
         <h2 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-900">
@@ -118,7 +118,7 @@ export function Directory() {
         )}
       </div>
 
-      <div className="flex min-h-[540px] w-full flex-col">
+      <div className="flex min-h-[540px] w-full min-w-full flex-col items-stretch">
       {loading ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }, (_, i) => (
@@ -126,7 +126,7 @@ export function Directory() {
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-zinc-300 bg-white px-6 py-14 text-center">
+        <div className="flex w-full min-w-full flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-zinc-200 bg-white p-12 text-center dark:border-zinc-800">
           <UsersRound className="size-8 text-zinc-400" aria-hidden />
           <p className="mt-3 font-semibold text-zinc-900">
             {error || profiles.length === 0 ? 'No alumni available' : 'No alumni match your filters'}
