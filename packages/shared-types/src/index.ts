@@ -15,11 +15,18 @@ export interface Profile {
   email: string | null;
 }
 
+export interface TravelContext {
+  city: string;
+  dates?: string;
+}
+
 export interface MatchmakingRequest {
+  /** May be empty when `travelContext` is set; the API then falls back to the requester's profile. */
   query: string;
   currentUserId?: string;
   targetCity?: string;
   intent?: string;
+  travelContext?: TravelContext;
 }
 
 export interface MatchResult {

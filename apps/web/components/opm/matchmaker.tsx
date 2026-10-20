@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { AlertTriangle, Check, Loader2, MapPin, SearchX, Sparkles } from 'lucide-react';
+import { AlertTriangle, Check, Loader2, MapPin, Plane, SearchX, Sparkles } from 'lucide-react';
 import type { MatchResult } from '@opm/shared-types';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { fetchMatches } from '@/lib/api';
 import { MatchCard } from './match-card';
@@ -83,6 +84,8 @@ export function Matchmaker() {
   const { profiles, currentUser } = useUser();
   const [query, setQuery] = React.useState('');
   const [city, setCity] = React.useState(ANY_CITY);
+  const [travelMode, setTravelMode] = React.useState(false);
+  const [dates, setDates] = React.useState('');
   const [status, setStatus] = React.useState<Status>('idle');
   const [stage, setStage] = React.useState(0);
   const [matches, setMatches] = React.useState<MatchResult[]>([]);
@@ -104,9 +107,19 @@ export function Matchmaker() {
     [profiles],
   );
 
+  const travelCity = travelMode && city !== ANY_CITY ? city : null;
+
+  function toggleTravel() {
+    const next = !travelMode;
+    setTravelMode(next);
+    // Travel mode needs a concrete destination.
+    if (next && city === ANY_CITY && cities.length > 0) setCity(cities[0]);
+    if (!next) setCity(ANY_CITY);
+  }
+
   async function search(text: string) {
     const q = text.trim();
-    if (!q) return;
+    if (!q && !travelCity) return;
     controller.current?.abort();
     clearTimeout(stageTimer.current);
     const ctrl = new AbortController();
@@ -115,7 +128,7 @@ export function Matchmaker() {
     setStatus('loading');
     setStage(0);
     setError(null);
-    setSearched(q);
+    setSearched(q || `Meetups in ${travelCity}`);
     stageTimer.current = setTimeout(() => setStage(1), 1800);
 
     try {
@@ -124,6 +137,9 @@ export function Matchmaker() {
           query: q,
           currentUserId: currentUser?.id,
           targetCity: city === ANY_CITY ? undefined : city,
+          travelContext: travelCity
+            ? { city: travelCity, dates: dates.trim() || undefined }
+            : undefined,
         },
         ctrl.signal,
       );
@@ -181,36 +197,77 @@ export function Matchmaker() {
             }}
             maxLength={1000}
             rows={4}
-            placeholder="Visiting London next week — who can connect for a fintech coffee?"
+            placeholder={
+              travelCity
+                ? `What are you looking to explore in ${travelCity}? (optional)`
+                : 'Visiting London next week — who can connect for a fintech coffee?'
+            }
             className="min-h-28 resize-none border-0 text-base shadow-none focus-visible:ring-0"
           />
+          <div
+            className={`mt-3 flex min-h-9 items-center gap-2 rounded-lg px-3 py-2 text-xs ${
+              travelMode ? 'bg-sky-50 text-sky-900' : 'bg-zinc-50 text-zinc-500'
+            }`}
+          >
+            <Plane className="size-3.5 shrink-0" aria-hidden />
+            <span className="truncate">
+              {travelMode
+                ? `Travel Mode: matching alumni living in ${city === ANY_CITY ? 'your destination' : city} for an in-person meetup.`
+                : 'Heading somewhere? Turn on Travel Mode to meet alumni in person.'}
+            </span>
+          </div>
           <div className="mt-3 flex flex-col gap-3 border-t border-zinc-100 pt-3 sm:flex-row sm:items-center sm:justify-between">
-            <DropdownMenu modal={false}>
-              <DropdownMenuTrigger asChild>
-                <Button type="button" variant="outline" size="sm" disabled={cities.length === 0}>
-                  <MapPin />
-                  Target city: {city === ANY_CITY ? 'Any' : city}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="max-h-72 overflow-y-auto">
-                <DropdownMenuRadioGroup value={city} onValueChange={setCity}>
-                  <DropdownMenuRadioItem value={ANY_CITY}>Any city</DropdownMenuRadioItem>
-                  {cities.map((c) => (
-                    <DropdownMenuRadioItem key={c} value={c}>
-                      {c}
-                    </DropdownMenuRadioItem>
-                  ))}
-                </DropdownMenuRadioGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <Button
+                type="button"
+                variant={travelMode ? 'default' : 'outline'}
+                size="sm"
+                aria-pressed={travelMode}
+                onClick={toggleTravel}
+                disabled={cities.length === 0}
+                className={travelMode ? 'bg-sky-600 text-white hover:bg-sky-700' : undefined}
+              >
+                <Plane />
+                Travel Mode
+              </Button>
+              <DropdownMenu modal={false}>
+                <DropdownMenuTrigger asChild>
+                  <Button type="button" variant="outline" size="sm" disabled={cities.length === 0}>
+                    <MapPin />
+                    {travelMode ? 'Destination' : 'Target city'}: {city === ANY_CITY ? 'Any' : city}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="max-h-72 overflow-y-auto">
+                  <DropdownMenuRadioGroup value={city} onValueChange={setCity}>
+                    {!travelMode && (
+                      <DropdownMenuRadioItem value={ANY_CITY}>Any city</DropdownMenuRadioItem>
+                    )}
+                    {cities.map((c) => (
+                      <DropdownMenuRadioItem key={c} value={c}>
+                        {c}
+                      </DropdownMenuRadioItem>
+                    ))}
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Input
+                value={dates}
+                onChange={(e) => setDates(e.target.value)}
+                maxLength={100}
+                aria-label="Travel dates (optional)"
+                placeholder="Dates, e.g. Next week or Nov 14-18"
+                tabIndex={travelMode ? 0 : -1}
+                className={`h-8 sm:w-64 ${travelMode ? '' : 'invisible max-sm:hidden'}`}
+              />
+            </div>
             <Button
               type="submit"
               size="lg"
-              disabled={!query.trim() || status === 'loading'}
+              disabled={(!query.trim() && !travelCity) || status === 'loading'}
               className="w-full bg-zinc-900 px-4 text-white hover:bg-zinc-800 sm:w-auto"
             >
               {status === 'loading' ? <Loader2 className="animate-spin" /> : <Sparkles />}
-              Find matches
+              {travelCity ? 'Find local alumni' : 'Find matches'}
             </Button>
           </div>
         </form>
@@ -257,7 +314,9 @@ export function Matchmaker() {
             <SearchX className="size-8 text-zinc-400" aria-hidden />
             <p className="mt-3 font-semibold text-zinc-900">No matches found</p>
             <p className="mt-1 text-sm text-zinc-600">
-              Try broader wording{city !== ANY_CITY ? ' or remove the city filter' : ''}.
+              {travelMode
+                ? `No alumni found in ${city} yet. Try another destination.`
+                : `Try broader wording${city !== ANY_CITY ? ' or remove the city filter' : ''}.`}
             </p>
           </div>
         )}
