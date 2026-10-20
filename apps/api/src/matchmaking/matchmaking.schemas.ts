@@ -1,0 +1,44 @@
+import { z } from 'zod';
+
+export const matchmakingRequestSchema = z.object({
+  query: z.string().trim().min(3).max(1000),
+  targetCity: z.string().trim().min(1).max(100).optional(),
+  currentUserId: z.string().trim().min(1).max(100).optional(),
+});
+
+/** What Claude returns; the service joins it with DB profiles to build `MatchResult`. */
+export const llmMatchesSchema = z.object({
+  matches: z
+    .array(
+      z.object({
+        profileId: z.string(),
+        matchReason: z.string().min(1),
+        suggestedIcebreaker: z.string().min(1),
+      }),
+    )
+    .min(1),
+});
+
+export type LlmMatches = z.infer<typeof llmMatchesSchema>;
+
+/** JSON schema sent to Anthropic structured outputs (mirrors `llmMatchesSchema`). */
+export const llmMatchesJsonSchema = {
+  type: 'object',
+  properties: {
+    matches: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          profileId: { type: 'string' },
+          matchReason: { type: 'string' },
+          suggestedIcebreaker: { type: 'string' },
+        },
+        required: ['profileId', 'matchReason', 'suggestedIcebreaker'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['matches'],
+  additionalProperties: false,
+} as const;

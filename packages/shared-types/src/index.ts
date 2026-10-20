@@ -17,7 +17,7 @@ export interface Profile {
 
 export interface MatchmakingRequest {
   query: string;
-  currentUserId: string;
+  currentUserId?: string;
   targetCity?: string;
   intent?: string;
 }
@@ -31,4 +31,10 @@ export interface MatchResult {
 
 export interface MatchmakingResponse {
   matches: MatchResult[];
+}
+
+export interface ProfileFilters {
+  city?: string;
+  cohort?: string;
+  industry?: string;
 }
