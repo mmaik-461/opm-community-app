@@ -11,7 +11,7 @@ import { UserProvider, useUser } from './user-context';
 function Content() {
   const { error, reload } = useUser();
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
+    <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
       {error && (
         <div
           role="alert"
