@@ -18,7 +18,7 @@ import { isDevLoginEnabled } from '@/utils/auth';
 type Credentials = Record<string, string> | undefined;
 
 /** Server-side base URL; the browser-facing `NEXT_PUBLIC_API_URL` is the fallback. */
-function apiUrl(): string {
+export function apiUrl(): string {
   return process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? DEFAULT_API_URL;
 }
 

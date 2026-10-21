@@ -14,6 +14,7 @@ import {
   SIGN_UP_SUBMIT_LABEL,
 } from '@/constants/auth';
 import { PRIMARY_BUTTON_CLASS } from '@/constants/ui';
+import { usePostSignIn } from '@/hooks/use-post-sign-in';
 import { registerAlumnus } from '@/lib/api';
 import { errorMessage } from '@/utils/errors';
 import {
@@ -32,6 +33,7 @@ export function RegisterForm() {
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [attempted, setAttempted] = React.useState(false);
+  const afterSignIn = usePostSignIn();
   const passwordIssue = attempted ? passwordError(values.password, values.confirmPassword) : null;
   const mismatch =
     values.confirmPassword !== '' && !passwordsMatch(values.password, values.confirmPassword);
@@ -57,6 +59,7 @@ export function RegisterForm() {
         redirect: false,
       });
       if (res?.error) setError(SIGN_UP_SIGN_IN_FAILED_MESSAGE);
+      else afterSignIn();
     } catch (err) {
       setError(errorMessage(err, 'Registration failed'));
     }

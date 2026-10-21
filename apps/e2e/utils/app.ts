@@ -1,7 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 import { DEFAULT_USER } from '../constants';
 
-export type AppTab = 'AI Matchmaker' | 'Alumni Directory' | 'My Intros' | 'Verifications';
+export type AppSection = 'AI Matchmaker' | 'Alumni Directory' | 'My Intros' | 'Verifications';
 
 /** Signs in through the development quick-login list, like a developer switching accounts. */
 export async function quickLogin(page: Page, fullName: string) {
@@ -22,8 +22,17 @@ export async function openApp(page: Page, signInAs: string = DEFAULT_USER) {
   await expect(switcher).toBeEnabled();
 }
 
-export async function openTab(page: Page, tab: AppTab) {
-  await page.getByRole('tab', { name: new RegExp(`^${tab}`) }).click();
+const SECTION_PATH: Record<AppSection, string> = {
+  'AI Matchmaker': '/',
+  'Alumni Directory': '/directory',
+  'My Intros': '/intros',
+  Verifications: '/admin',
+};
+
+/** Follows the header link to a section, like a person would, and waits for its URL. */
+export async function openSection(page: Page, section: AppSection) {
+  await page.getByRole('link', { name: new RegExp(`^${section}`) }).click();
+  await expect(page).toHaveURL(SECTION_PATH[section]);
 }
 
 /** Uses the header "acting as" switcher, exactly like a person would. */

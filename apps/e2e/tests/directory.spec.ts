@@ -1,14 +1,14 @@
 import { expect, test } from '@playwright/test';
 import { MAX_LAYOUT_SHIFT, MIN_DIRECTORY_GRID_HEIGHT_PX, SEARCH_DEBOUNCE_MS } from '../constants';
 import { fetchProfiles } from '../utils/api';
-import { openApp, openTab } from '../utils/app';
+import { openApp, openSection } from '../utils/app';
 import { readLayoutShift, resetLayoutShift, trackLayoutShift } from '../utils/layout-shift';
 
 test.describe('Alumni Directory', () => {
   test.beforeEach(async ({ page }) => {
     await trackLayoutShift(page);
     await openApp(page);
-    await openTab(page, 'Alumni Directory');
+    await openSection(page, 'Alumni Directory');
   });
 
   test('filters by city and industry together, and clears', async ({ page, request }) => {
@@ -64,7 +64,7 @@ test.describe('Alumni Directory', () => {
     await page.clock.install();
     await page.reload();
     await openApp(page);
-    await openTab(page, 'Alumni Directory');
+    await openSection(page, 'Alumni Directory');
     await expect(page.getByRole('heading', { name: `${total} of ${total} alumni` })).toBeVisible();
     await page.clock.pauseAt(new Date(Date.now() + 5_000));
 

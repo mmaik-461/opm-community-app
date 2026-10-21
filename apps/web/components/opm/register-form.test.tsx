@@ -4,15 +4,15 @@ import { describe, expect, it } from 'vitest';
 import { jsonError, stubApi } from '@/test/api-fake';
 import { makeProfile } from '@/test/fixtures';
 import { signIn } from '@/test/next-auth';
-import { SignIn } from './sign-in';
+import { router } from '@/test/next-navigation';
+import { RegisterForm } from './register-form';
 
 const SIGN_IN_OK = { ok: true, error: undefined, status: 200, url: null };
 const STRONG = 'Str0ng!Passw0rd';
 const created = { accessToken: 'api-token', profile: makeProfile({ id: 'new' }) };
 
-async function openSignUp(user: ReturnType<typeof userEvent.setup>) {
-  render(<SignIn devLoginEnabled={false} />);
-  await user.click(screen.getByRole('tab', { name: 'Sign up' }));
+function openSignUp() {
+  render(<RegisterForm />);
 }
 
 async function fillRequired(user: ReturnType<typeof userEvent.setup>) {
@@ -31,7 +31,7 @@ const submit = (user: ReturnType<typeof userEvent.setup>) =>
 describe('Sign up password', () => {
   it('ticks each requirement as the typed password satisfies it', async () => {
     const user = userEvent.setup();
-    await openSignUp(user);
+    openSignUp();
     const password = screen.getByLabelText('Password');
     const met = () =>
       screen
@@ -55,7 +55,7 @@ describe('Sign up password', () => {
   it('blocks submission and flags a mismatching confirmation', async () => {
     const user = userEvent.setup();
     const api = stubApi({ 'POST /auth/register': created });
-    await openSignUp(user);
+    openSignUp();
     await fillRequired(user);
     await user.clear(screen.getByLabelText('Confirm password'));
     await user.type(screen.getByLabelText('Confirm password'), 'Different1!');
@@ -70,7 +70,7 @@ describe('Sign up password', () => {
   it('blocks submission of a password that misses a requirement', async () => {
     const user = userEvent.setup();
     const api = stubApi({ 'POST /auth/register': created });
-    await openSignUp(user);
+    openSignUp();
     await fillRequired(user);
     for (const label of ['Password', 'Confirm password']) {
       await user.clear(screen.getByLabelText(label));
@@ -87,7 +87,7 @@ describe('Sign up password', () => {
     ['Confirm password', 'confirm password'],
   ])('toggles the %s field between hidden and visible', async (label, subject) => {
     const user = userEvent.setup();
-    await openSignUp(user);
+    openSignUp();
     const input = screen.getByLabelText(label);
     expect(input).toHaveAttribute('type', 'password');
 
@@ -104,35 +104,30 @@ describe('Sign up password', () => {
 
   it('toggles each field independently', async () => {
     const user = userEvent.setup();
-    await openSignUp(user);
+    openSignUp();
     await user.click(screen.getByRole('button', { name: 'Show password' }));
     expect(screen.getByLabelText('Confirm password')).toHaveAttribute('type', 'password');
   });
 });
 
 describe('Sign up', () => {
-  it('shows Sign in by default and switches to the registration form', async () => {
-    const user = userEvent.setup();
-    render(<SignIn devLoginEnabled={false} />);
-    expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
-    expect(screen.queryByLabelText('Graduation year')).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole('tab', { name: 'Sign up' }));
-    expect(screen.getByLabelText('Graduation year')).toBeInTheDocument();
-    expect(screen.getByLabelText(/Diploma ID/)).not.toBeRequired();
+  it('marks the graduation year required and the diploma ID optional', () => {
+    openSignUp();
     expect(screen.getByLabelText('Graduation year')).toBeRequired();
+    expect(screen.getByLabelText(/Diploma ID/)).not.toBeRequired();
   });
 
   it('registers with a trimmed payload, then signs in with the same credentials', async () => {
     const user = userEvent.setup();
     const api = stubApi({ 'POST /auth/register': created });
     signIn.mockResolvedValueOnce(SIGN_IN_OK);
-    await openSignUp(user);
+    openSignUp();
     await fillRequired(user);
     await user.type(screen.getByLabelText(/Diploma ID/), ' D-42 ');
     await submit(user);
 
     expect(await screen.findByRole('button', { name: 'Create account' })).toBeEnabled();
+    expect(router.replace).toHaveBeenCalledWith('/');
     expect(api.calls).toHaveLength(1);
     expect(api.calls[0]).toMatchObject({
       method: 'POST',
@@ -159,7 +154,7 @@ describe('Sign up', () => {
     const user = userEvent.setup();
     const api = stubApi({ 'POST /auth/register': created });
     signIn.mockResolvedValueOnce(SIGN_IN_OK);
-    await openSignUp(user);
+    openSignUp();
     await fillRequired(user);
     await submit(user);
 
@@ -172,7 +167,7 @@ describe('Sign up', () => {
     stubApi({ 'POST /auth/register': created });
     let finish: (value: typeof SIGN_IN_OK) => void = () => undefined;
     signIn.mockImplementationOnce(() => new Promise((resolve) => (finish = resolve)));
-    await openSignUp(user);
+    openSignUp();
     await fillRequired(user);
     await submit(user);
 
@@ -186,7 +181,7 @@ describe('Sign up', () => {
     stubApi({
       'POST /auth/register': () => jsonError(409, 'An account with this email already exists'),
     });
-    await openSignUp(user);
+    openSignUp();
     await fillRequired(user);
     await submit(user);
 
@@ -197,13 +192,13 @@ describe('Sign up', () => {
     expect(screen.getByRole('button', { name: 'Create account' })).toBeEnabled();
   });
 
-  it('points to the Sign in tab when the account exists but automatic sign-in fails', async () => {
+  it('points to the Sign in page when the account exists but automatic sign-in fails', async () => {
     const user = userEvent.setup();
     stubApi({ 'POST /auth/register': created });
-    await openSignUp(user); // the mock rejects credential sign-ins by default
+    openSignUp(); // the mock rejects credential sign-ins by default
     await fillRequired(user);
     await submit(user);
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(/Please use the Sign in tab/);
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Please use the Sign in page/);
   });
 });

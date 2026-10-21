@@ -2,8 +2,6 @@ export const LABEL_CLASS = 'text-xs font-semibold tracking-wider uppercase text-
 
 export const PRIMARY_BUTTON_CLASS = 'bg-zinc-900 text-white hover:bg-zinc-800';
 
-export const HOME_ROUTE = '/';
-
 export const NOT_FOUND_CODE = '404';
 export const NOT_FOUND_TITLE = 'Page not found';
 export const NOT_FOUND_MESSAGE =

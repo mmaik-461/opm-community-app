@@ -1,9 +1,11 @@
 'use client';
 
 import * as React from 'react';
+import { useRouter } from 'next/navigation';
 import { signIn, signOut, useSession } from 'next-auth/react';
 import type { Profile } from '@opm/shared-types';
 import { DEV_PROVIDER_ID } from '@/constants/auth';
+import { ROUTES } from '@/constants/routes';
 import { fetchProfiles } from '@/lib/api';
 import { isDevLoginEnabled } from '@/utils/auth';
 import { errorMessage } from '@/utils/errors';
@@ -15,7 +17,7 @@ interface UserContextValue {
   /** Development impersonation: re-signs in as another alumnus. A no-op when dev login is off. */
   setCurrentUserId: (id: string) => void;
   devLoginEnabled: boolean;
-  signOut: () => void;
+  signOut: () => Promise<void>;
   /** True while the session or the directory is still being read. */
   loading: boolean;
   error: string | null;
@@ -26,13 +28,21 @@ interface UserContextValue {
 
 const UserContext = React.createContext<UserContextValue | null>(null);
 
-export function UserProvider({ children }: { children: React.ReactNode }) {
+interface UserProviderProps {
+  children: React.ReactNode;
+  /** Directory the server already loaded for this request; skips the first browser fetch. */
+  initialProfiles?: Profile[] | null;
+}
+
+export function UserProvider({ children, initialProfiles }: UserProviderProps) {
+  const router = useRouter();
   const { data: session, status } = useSession();
   const authenticated = status === 'authenticated';
   const sessionUserId = session?.user.id ?? null;
   const devLoginEnabled = isDevLoginEnabled();
 
-  const [profiles, setProfiles] = React.useState<Profile[]>([]);
+  const [profiles, setProfiles] = React.useState<Profile[]>(initialProfiles ?? []);
+  const hasServerData = React.useRef(Boolean(initialProfiles));
   const [loadingProfiles, setLoadingProfiles] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [attempt, setAttempt] = React.useState(0);
@@ -42,6 +52,10 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     if (!authenticated) {
       setProfiles([]);
       setError(null);
+      return;
+    }
+    if (hasServerData.current) {
+      hasServerData.current = false;
       return;
     }
     const controller = new AbortController();
@@ -68,7 +82,11 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     [devLoginEnabled],
   );
 
-  const handleSignOut = React.useCallback(() => void signOut({ redirect: false }), []);
+  const handleSignOut = React.useCallback(async () => {
+    await signOut({ redirect: false });
+    router.replace(ROUTES.login);
+    router.refresh();
+  }, [router]);
   const reload = React.useCallback(() => setAttempt((a) => a + 1), []);
   const replaceProfile = React.useCallback(
     (updated: Profile) =>

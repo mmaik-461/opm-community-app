@@ -1,9 +1,5 @@
 import type { VerificationDecision } from '@opm/shared-types';
 
-export const ADMIN_TAB = 'admin';
-export const ADMIN_TAB_LABEL = 'Verifications';
-export const ADMIN_ROUTE = '/admin';
-
 export const VERIFICATIONS_TITLE = 'Pending verifications';
 export const VERIFICATIONS_SUBTITLE =
   'Review new alumni registrations. Approving unlocks AI matchmaking and intro requests.';

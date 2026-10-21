@@ -20,18 +20,19 @@ export const DEV_LOGIN_HINT = 'Visible outside production only. Pick any alumnus
 
 export const SIGN_IN_TAB = 'Sign in';
 export const SIGN_UP_TAB = 'Sign up';
+export const SIGN_UP_TITLE = 'Join the OPM Community Hub';
+export const SIGN_UP_SUBTITLE =
+  'Create your alumni account. An administrator verifies it before matching unlocks.';
+export const AUTH_NAV_LABEL = 'Account';
 export const SIGN_UP_SUBMIT_LABEL = 'Create account';
 export const SIGN_UP_SIGN_IN_FAILED_MESSAGE =
-  'Your account was created, but signing in failed. Please use the Sign in tab.';
+  'Your account was created, but signing in failed. Please use the Sign in page.';
 export const PASSWORD_REQUIREMENTS_LABEL = 'Password requirements';
 export const PASSWORD_MISMATCH_MESSAGE = 'Passwords do not match.';
 export const PASSWORD_WEAK_MESSAGE = 'Choose a password that meets every requirement.';
 export const DIPLOMA_NUMBER_HINT = 'Helps us verify you faster.';
 
 export const GRADUATION_YEAR_MIN = 1980;
-
-export const AUTH_TAB_SIGN_IN = 'sign-in';
-export const AUTH_TAB_SIGN_UP = 'sign-up';
 
 export const EMPTY_REGISTER_VALUES = {
   fullName: '',

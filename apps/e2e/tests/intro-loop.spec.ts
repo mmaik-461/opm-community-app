@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { Profile } from '@opm/shared-types';
 import { fetchProfiles } from '../utils/api';
-import { actAs, openApp, openTab } from '../utils/app';
+import { actAs, openApp, openSection } from '../utils/app';
 import { stubMatchmaking } from '../utils/matchmaking-stub';
 
 // Intros are persisted in the shared e2e database, so each journey uses its own pair.
@@ -30,7 +30,7 @@ async function requestIntroTo(page: Page, profiles: Profile[], target: string, m
       }),
     });
   });
-  await openTab(page, 'AI Matchmaker');
+  await openSection(page, 'AI Matchmaker');
   await page.getByRole('textbox', { name: 'What are you looking for?' }).fill('Series A advice');
   await page.getByRole('button', { name: 'Find matches' }).click();
 
@@ -59,7 +59,7 @@ test.describe('Intro request closed loop', () => {
     await requestIntroTo(page, profiles, target, message);
     await expect(page.getByRole('button', { name: 'Intro Requested' })).toBeDisabled();
 
-    await openTab(page, 'My Intros');
+    await openSection(page, 'My Intros');
     await page.getByRole('tab', { name: /^Sent/ }).click();
     await expect(page.getByRole('heading', { name: target, level: 3 })).toBeVisible();
     await expect(page.getByText(message)).toBeVisible();
@@ -79,10 +79,10 @@ test.describe('Intro request closed loop', () => {
 
     // --- B sees the pending badge in the header, then accepts
     await expect(
-      page.getByRole('tab', { name: /^My Intros/ }).getByLabel('1 pending'),
+      page.getByRole('link', { name: /^My Intros/ }).getByLabel('1 pending'),
     ).toBeVisible();
 
-    await openTab(page, 'My Intros');
+    await openSection(page, 'My Intros');
     await page.getByRole('tab', { name: /^Received/ }).click();
     await expect(page.getByRole('tab', { name: /^Received/ })).toContainText('1 new');
     await expect(page.getByRole('heading', { name: requester, level: 3 })).toBeVisible();
@@ -95,7 +95,7 @@ test.describe('Intro request closed loop', () => {
 
     // --- back to A: the request is now ACCEPTED
     await actAs(page, requester);
-    await openTab(page, 'My Intros');
+    await openSection(page, 'My Intros');
     await page.getByRole('tab', { name: /^Sent/ }).click();
     await expect(page.getByRole('heading', { name: target, level: 3 })).toBeVisible();
     await expect(page.getByText('Accepted', { exact: true })).toBeVisible();
@@ -120,7 +120,7 @@ test.describe('Intro request closed loop', () => {
     await expect(dialog).toBeHidden();
 
     await actAs(page, target);
-    await openTab(page, 'My Intros');
+    await openSection(page, 'My Intros');
     await page.getByRole('tab', { name: /^Received/ }).click();
     await expect(page.getByRole('heading', { name: requester, level: 3 })).toHaveCount(1);
     await page.getByRole('button', { name: 'Decline' }).click();
@@ -128,7 +128,7 @@ test.describe('Intro request closed loop', () => {
     await expect(page.getByLabel('1 pending')).toHaveCount(0);
 
     await actAs(page, requester);
-    await openTab(page, 'My Intros');
+    await openSection(page, 'My Intros');
     await page.getByRole('tab', { name: /^Sent/ }).click();
     await expect(page.getByText('Declined', { exact: true })).toBeVisible();
   });

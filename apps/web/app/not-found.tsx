@@ -2,13 +2,13 @@ import Link from 'next/link';
 import { Compass } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
 import {
-  HOME_ROUTE,
   NOT_FOUND_CODE,
   NOT_FOUND_HOME_LABEL,
   NOT_FOUND_MESSAGE,
   NOT_FOUND_TITLE,
   PRIMARY_BUTTON_CLASS,
 } from '@/constants/ui';
+import { ROUTES } from '@/constants/routes';
 import { cn } from '@/lib/utils';
 
 export default function NotFound() {
@@ -21,7 +21,7 @@ export default function NotFound() {
       <h1 className="mt-2 text-3xl font-semibold tracking-tight">{NOT_FOUND_TITLE}</h1>
       <p className="mt-3 text-sm text-zinc-600">{NOT_FOUND_MESSAGE}</p>
       <Link
-        href={HOME_ROUTE}
+        href={ROUTES.home}
         className={cn(buttonVariants({ size: 'lg' }), PRIMARY_BUTTON_CLASS, 'mt-8')}
       >
         {NOT_FOUND_HOME_LABEL}

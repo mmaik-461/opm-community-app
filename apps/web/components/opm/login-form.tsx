@@ -1,43 +1,41 @@
 'use client';
 
 import * as React from 'react';
-import { Loader2, Network } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { signIn } from 'next-auth/react';
 import type { Profile } from '@opm/shared-types';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  AUTH_TAB_SIGN_IN,
-  AUTH_TAB_SIGN_UP,
   CREDENTIALS_PROVIDER_ID,
   DEV_LOGIN_FAILED_MESSAGE,
   DEV_LOGIN_HEADING,
   DEV_LOGIN_HINT,
   DEV_PROVIDER_ID,
   SIGN_IN_FAILED_MESSAGE,
-  SIGN_IN_SUBTITLE,
-  SIGN_IN_TAB,
-  SIGN_IN_TITLE,
-  SIGN_UP_TAB,
 } from '@/constants/auth';
 import { LABEL_CLASS, PRIMARY_BUTTON_CLASS } from '@/constants/ui';
+import { usePostSignIn } from '@/hooks/use-post-sign-in';
 import { fetchDevProfiles } from '@/lib/api';
 import { FormField } from './form-field';
-import { RegisterForm } from './register-form';
 
-function CredentialsForm() {
+export function CredentialsForm() {
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const afterSignIn = usePostSignIn();
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
     const res = await signIn(CREDENTIALS_PROVIDER_ID, { email, password, redirect: false });
-    if (res?.error) setError(SIGN_IN_FAILED_MESSAGE);
-    setSubmitting(false);
+    if (res?.error) {
+      setError(SIGN_IN_FAILED_MESSAGE);
+      setSubmitting(false);
+      return;
+    }
+    afterSignIn();
   }
 
   return (
@@ -73,9 +71,10 @@ function CredentialsForm() {
   );
 }
 
-function DevQuickLogin() {
+export function DevQuickLogin() {
   const [profiles, setProfiles] = React.useState<Profile[]>([]);
   const [error, setError] = React.useState<string | null>(null);
+  const afterSignIn = usePostSignIn();
 
   React.useEffect(() => {
     const controller = new AbortController();
@@ -86,6 +85,12 @@ function DevQuickLogin() {
       });
     return () => controller.abort();
   }, []);
+
+  async function devSignIn(profileId: string) {
+    const res = await signIn(DEV_PROVIDER_ID, { profileId, redirect: false });
+    if (res?.error) setError(DEV_LOGIN_FAILED_MESSAGE);
+    else afterSignIn();
+  }
 
   return (
     <section aria-labelledby="dev-login-heading" className="border-t border-zinc-200 pt-6">
@@ -105,7 +110,7 @@ function DevQuickLogin() {
               variant="outline"
               size="sm"
               className="w-full justify-start"
-              onClick={() => void signIn(DEV_PROVIDER_ID, { profileId: p.id, redirect: false })}
+              onClick={() => void devSignIn(p.id)}
             >
               Continue as {p.fullName}
               <span className="text-zinc-500">({p.cohort})</span>
@@ -114,32 +119,5 @@ function DevQuickLogin() {
         ))}
       </ul>
     </section>
-  );
-}
-
-export function SignIn({ devLoginEnabled }: { devLoginEnabled: boolean }) {
-  return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center gap-6 px-4 py-12">
-      <div className="flex items-center gap-3">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-zinc-900 text-white">
-          <Network className="size-5" aria-hidden />
-        </div>
-        <h1 className="text-lg font-semibold tracking-tight">{SIGN_IN_TITLE}</h1>
-      </div>
-      <p className="text-sm text-zinc-600">{SIGN_IN_SUBTITLE}</p>
-      <Tabs defaultValue={AUTH_TAB_SIGN_IN}>
-        <TabsList className="w-full">
-          <TabsTrigger value={AUTH_TAB_SIGN_IN}>{SIGN_IN_TAB}</TabsTrigger>
-          <TabsTrigger value={AUTH_TAB_SIGN_UP}>{SIGN_UP_TAB}</TabsTrigger>
-        </TabsList>
-        <TabsContent value={AUTH_TAB_SIGN_IN} className="pt-4">
-          <CredentialsForm />
-        </TabsContent>
-        <TabsContent value={AUTH_TAB_SIGN_UP} className="pt-4">
-          <RegisterForm />
-        </TabsContent>
-      </Tabs>
-      {devLoginEnabled && <DevQuickLogin />}
-    </main>
   );
 }

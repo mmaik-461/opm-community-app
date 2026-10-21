@@ -8,6 +8,7 @@ export const EDIT_PROFILE_SAVED_MESSAGE = 'Profile saved';
 export const EDIT_PROFILE_FAILED_MESSAGE = 'Could not save your profile';
 export const SKILLS_HINT = 'Separate skills with commas.';
 export const BIO_ROWS = 5;
+export const SAVED_NOTICE_DURATION_MS = 4000;
 
 /** Skills are typed as one comma-separated line. */
 export const SKILLS_SEPARATOR = ',';

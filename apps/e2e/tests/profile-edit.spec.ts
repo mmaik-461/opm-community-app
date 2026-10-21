@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { PROFILE_EDITOR } from '../constants';
-import { actAs, openApp, openTab } from '../utils/app';
+import { actAs, openApp, openSection } from '../utils/app';
 
 const NEW_BIO = 'Now advising climate-tech founders on cross-border expansion and fundraising.';
 const NEW_SKILLS = ['climate finance', 'market entry', 'board advisory'];
@@ -23,7 +23,7 @@ test.describe('Profile editing', () => {
     await expect(page.getByText('Profile saved')).toBeVisible();
 
     // The directory shows the saved skills straight away...
-    await openTab(page, 'Alumni Directory');
+    await openSection(page, 'Alumni Directory');
     const card = page.getByRole('heading', { name: PROFILE_EDITOR, level: 3 });
     await expect(card).toBeVisible();
     for (const skill of NEW_SKILLS) await expect(page.getByText(skill).first()).toBeVisible();

@@ -8,7 +8,8 @@ test.describe('Registration and verification', () => {
     page,
   }) => {
     await page.goto('/');
-    await page.getByRole('tab', { name: 'Sign up' }).click();
+    await page.getByRole('link', { name: 'Sign up' }).click();
+    await expect(page).toHaveURL('/register');
     await page.getByLabel('Full name').fill(REGISTRANT.fullName);
     await page.getByLabel('Email').fill(REGISTRANT.email);
     const password = page.getByLabel('Password', { exact: true });
@@ -71,7 +72,7 @@ test.describe('Registration and verification', () => {
     await expect(page.getByRole('button', { name: SWITCHER })).toContainText(REGISTRANT.fullName);
     await page.getByRole('button', { name: 'Sign out' }).click();
 
-    await page.getByRole('tab', { name: 'Sign up' }).click();
+    await page.getByRole('link', { name: 'Sign up' }).click();
     await page.getByLabel('Full name').fill('Someone Else');
     await page.getByLabel('Email').fill(REGISTRANT.email);
     await page.getByLabel('Password', { exact: true }).fill(REGISTRANT.password);
