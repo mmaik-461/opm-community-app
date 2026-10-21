@@ -42,4 +42,20 @@ test.describe('Public landing page', () => {
     await expect(heroHeading(page)).toHaveCount(0);
     await expectSignedInAs(page, DEFAULT_USER);
   });
+
+  for (const path of [LOGIN_PATH, '/register']) {
+    test(`a guest on ${path} returns to the landing page via "Back to home" or the logo`, async ({
+      page,
+    }) => {
+      await page.goto(path);
+      await page.getByRole('link', { name: 'Back to home' }).click();
+      await expect(page).toHaveURL('/');
+      await expect(heroHeading(page)).toBeVisible();
+
+      await page.goto(path);
+      await page.getByRole('link', { name: 'OPM Community Hub home' }).click();
+      await expect(page).toHaveURL('/');
+      await expect(heroHeading(page)).toBeVisible();
+    });
+  }
 });

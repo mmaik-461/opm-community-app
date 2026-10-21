@@ -52,3 +52,6 @@ export const VERIFICATION_BANNER_MESSAGE =
 export const REJECTED_BANNER_TITLE = 'Your alumni verification was not approved';
 export const REJECTED_BANNER_MESSAGE =
   'You can still browse the community, but AI matchmaking and intro requests are unavailable. Contact an administrator if you think this is a mistake.';
+
+export const BACK_TO_HOME_LABEL = 'Back to home';
+export const BRAND_HOME_LABEL = 'OPM Community Hub home';
