@@ -19,7 +19,7 @@ describe('AppShell authentication gate', () => {
     render(<AppShell />);
 
     expect(await screen.findByRole('heading', { name: /sign in/i })).toBeInTheDocument();
-    expect(screen.queryAllByRole('tab')).toHaveLength(0);
+    expect(screen.queryAllByRole('tab', { name: /alumni directory/i })).toHaveLength(0);
     expect(api.calls.map((c) => c.path)).not.toContain('/profiles');
     expect(api.calls.map((c) => c.path)).not.toContain('/intros');
   });
@@ -49,6 +49,33 @@ describe('AppShell authentication gate', () => {
     await user.click(await screen.findByRole('button', { name: 'Sign out' }));
     expect(signOut).toHaveBeenCalledWith({ redirect: false });
     expect(await screen.findByRole('heading', { name: /sign in/i })).toBeInTheDocument();
+  });
+});
+
+describe('verification status', () => {
+  const pending = makeProfile({
+    id: 'pat',
+    fullName: 'Pat Pending',
+    status: 'PENDING_VERIFICATION',
+  });
+
+  it('tells a PENDING_VERIFICATION user their account is awaiting alumni verification', async () => {
+    stubApi({ 'GET /profiles': [alice, pending], 'GET /intros': emptyIntros() });
+    setMockSession('pat');
+    render(<AppShell />);
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Your account is awaiting alumni verification',
+    );
+  });
+
+  it('shows no banner to a verified user', async () => {
+    stubApi({ 'GET /profiles': [alice, pending], 'GET /intros': emptyIntros() });
+    setMockSession('alice');
+    render(<AppShell />);
+
+    await screen.findAllByRole('tab', { name: /alumni directory/i });
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 });
 

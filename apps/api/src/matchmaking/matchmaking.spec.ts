@@ -1,5 +1,5 @@
 import type { Sql } from '@prisma/client/runtime/library';
-import { BadGatewayException, Logger } from '@nestjs/common';
+import { BadGatewayException, ForbiddenException, Logger } from '@nestjs/common';
 import type { MatchmakingRequest } from '@opm/shared-types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CANDIDATE_LIMIT, MATCH_LIMIT } from '../common/constants/matchmaking';
@@ -87,6 +87,11 @@ describe('MatchmakingService', () => {
   });
 
   describe('retrieval SQL', () => {
+    it('only retrieves verified (ACTIVE) alumni', async () => {
+      await service.match('me', { query: 'fintech mentor' });
+      expect(sqlOf().sql).toContain(`"status" = 'ACTIVE'::"ProfileStatus"`);
+    });
+
     it('excludes the requester by id and passes the id as a bound parameter', async () => {
       await service.match('me', { query: 'fintech mentor' });
       const sql = sqlOf();
@@ -116,6 +121,23 @@ describe('MatchmakingService', () => {
       expect(sql.sql).toMatch(/ORDER BY "embedding" <=> \?::vector/);
       expect(sql.values).toContain(CANDIDATE_LIMIT);
       expect(sql.values).toContain('[0.5,0.25]');
+    });
+  });
+
+  describe('verification gate', () => {
+    it('rejects a PENDING_VERIFICATION requester with 403 before embedding or ranking', async () => {
+      findUnique.mockResolvedValue({ ...requester, status: 'PENDING_VERIFICATION' });
+      const err = await service.match('me', { query: 'fintech mentor' }).catch((e: unknown) => e);
+      expect(err).toBeInstanceOf(ForbiddenException);
+      expect((err as Error).message).toMatch(/awaiting alumni verification/i);
+      expect(sdk.embeddingsCreate).not.toHaveBeenCalled();
+      expect(queryRaw).not.toHaveBeenCalled();
+    });
+
+    it('does not leak the verification status into the LLM prompt', async () => {
+      findUnique.mockResolvedValue({ ...requester, status: 'ACTIVE' });
+      await service.match('me', { query: 'fintech mentor' });
+      expect(userMessage()).not.toContain('ACTIVE');
     });
   });
 

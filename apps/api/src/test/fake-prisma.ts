@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import type { Profile } from '@opm/shared-types';
 
 type Row = Record<string, unknown>;
@@ -29,7 +30,10 @@ function matches(row: Row, where: Where = {}): boolean {
  * It applies where/orderBy/skip/take for real, so tests assert behaviour against data
  * instead of against canned return values.
  */
-export type StoredProfile = Profile & { passwordHash?: string | null };
+export type StoredProfile = Profile & {
+  passwordHash?: string | null;
+  diplomaNumber?: string | null;
+};
 
 function applySelect<T extends Row>(row: T, select?: Record<string, boolean>): Row {
   if (!select) return row;
@@ -42,6 +46,8 @@ function applySelect<T extends Row>(row: T, select?: Record<string, boolean>): R
 
 export function createFakePrisma(profiles: StoredProfile[]) {
   const intros: StoredIntro[] = [];
+  /** Profile id -> vector literal written by the raw `embedding` UPDATE. */
+  const embeddings = new Map<string, string>();
   let clock = Date.UTC(2026, 0, 1);
   let seq = 0;
 
@@ -117,9 +123,43 @@ export function createFakePrisma(profiles: StoredProfile[]) {
       const hit = profiles.find((p) => matches(p as unknown as Row, where));
       return hit ? applySelect(hit as unknown as Row, select) : null;
     },
+    create: async ({
+      data,
+      select,
+    }: {
+      data: Partial<StoredProfile>;
+      select?: Record<string, boolean>;
+    }) => {
+      if (data.email && profiles.some((p) => p.email === data.email)) {
+        throw new Prisma.PrismaClientKnownRequestError('Unique constraint failed on email', {
+          code: 'P2002',
+          clientVersion: 'test',
+        });
+      }
+      const created = { avatarUrl: null, linkedinUrl: null, travelStatus: 'LIVING_IN', ...data };
+      const stored = { ...created, id: `new-${profiles.length + 1}` } as StoredProfile;
+      profiles.push(stored);
+      return applySelect(stored as unknown as Row, select);
+    },
   };
 
-  return { introRequest, profile, intros };
+  /** Only the embedding UPDATE is raw SQL in the code under test: (vector, id) are its bound values. */
+  const $executeRaw = async (_sql: TemplateStringsArray, vector: string, id: string) => {
+    embeddings.set(id, vector);
+    return 1;
+  };
+
+  const db = { introRequest, profile, intros, embeddings, $executeRaw };
+  const $transaction = async <T>(fn: (tx: typeof db) => Promise<T>) => {
+    const snapshot = profiles.length;
+    try {
+      return await fn(db);
+    } catch (err) {
+      profiles.length = snapshot; // roll back
+      throw err;
+    }
+  };
+  return { ...db, $transaction };
 }
 
 export type FakePrisma = ReturnType<typeof createFakePrisma>;

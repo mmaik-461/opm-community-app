@@ -1,7 +1,9 @@
 import { ServiceUnavailableException } from '@nestjs/common';
 import type { AuthenticatedUser } from '@opm/shared-types';
-import { jwtVerify } from 'jose';
+import { jwtVerify, SignJWT } from 'jose';
 import {
+  ACCESS_TOKEN_TTL_SECONDS,
+  AUTH_AUTO_VERIFY_ENV,
   AUTH_DEV_LOGIN_ENV,
   AUTH_SECRET_ENV,
   BEARER_SCHEME,
@@ -42,4 +44,19 @@ export async function verifyAccessToken(
 /** Quick-login is on outside production, or when explicitly enabled with `AUTH_DEV_LOGIN=true`. */
 export function isDevLoginEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
   return env[AUTH_DEV_LOGIN_ENV] === 'true' || env.NODE_ENV !== 'production';
+}
+
+/** Signs the bearer token the {@link AuthGuard} accepts; it carries only the profile id. */
+export async function signAccessToken(userId: string, secret: Uint8Array): Promise<string> {
+  return new SignJWT({})
+    .setProtectedHeader({ alg: JWT_ALGORITHM })
+    .setSubject(userId)
+    .setIssuedAt()
+    .setExpirationTime(`${ACCESS_TOKEN_TTL_SECONDS}s`)
+    .sign(secret);
+}
+
+/** New registrations skip verification only when explicitly enabled with `AUTH_AUTO_VERIFY=true`. */
+export function isAutoVerifyEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+  return env[AUTH_AUTO_VERIFY_ENV] === 'true';
 }

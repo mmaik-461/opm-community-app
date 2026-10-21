@@ -1,5 +1,12 @@
 export type TravelStatus = 'LIVING_IN' | 'TRAVELING_TO';
 
+export type ProfileStatus = 'ACTIVE' | 'PENDING_VERIFICATION';
+
+export const ProfileStatus = {
+  ACTIVE: 'ACTIVE',
+  PENDING_VERIFICATION: 'PENDING_VERIFICATION',
+} as const satisfies Record<ProfileStatus, ProfileStatus>;
+
 export interface Profile {
   id: string;
   fullName: string;
@@ -8,8 +15,11 @@ export interface Profile {
   city: string;
   travelStatus: TravelStatus;
   cohort: string;
+  graduationYear: number;
   industry: string;
   skills: string[];
+  /** Only ACTIVE (verified) alumni can use matchmaking and request intros. */
+  status: ProfileStatus;
   avatarUrl: string | null;
   linkedinUrl: string | null;
   email: string | null;
@@ -112,5 +122,26 @@ export interface DevLoginDto {
 }
 
 export interface LoginResponse {
+  profile: Profile;
+}
+
+/** Public sign-up. The new profile is PENDING_VERIFICATION unless the API auto-verifies (`AUTH_AUTO_VERIFY=true`). */
+export interface RegisterDto {
+  email: string;
+  password: string;
+  fullName: string;
+  city: string;
+  industry: string;
+  graduationYear: number;
+  /** Optional verification identifier; stored but never returned by the API. */
+  diplomaNumber?: string;
+  headline?: string;
+  bio?: string;
+  skills?: string[];
+}
+
+export interface RegisterResponse {
+  /** Short-lived HS256 bearer token (`sub` = profile id) signed with the shared `AUTH_SECRET`. */
+  accessToken: string;
   profile: Profile;
 }

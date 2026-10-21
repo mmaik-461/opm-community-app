@@ -1,12 +1,13 @@
-import { BadGatewayException, Injectable, Logger } from '@nestjs/common';
+import { BadGatewayException, ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
-import type {
-  MatchmakingRequest,
-  MatchmakingResponse,
-  MatchResult,
-  Profile,
+import {
+  ProfileStatus,
+  type MatchmakingRequest,
+  type MatchmakingResponse,
+  type MatchResult,
+  type Profile,
 } from '@opm/shared-types';
 import {
   CANDIDATE_LIMIT,
@@ -19,7 +20,10 @@ import {
   MATCHMAKER_SYSTEM_PROMPT,
   SIMILARITY_PRECISION,
 } from '../common/constants/matchmaking';
-import { REQUESTER_CONTEXT_SELECT } from '../common/constants/profiles';
+import {
+  PENDING_VERIFICATION_MESSAGE,
+  REQUESTER_CONTEXT_SELECT,
+} from '../common/constants/profiles';
 import { requireEnvKey } from '../common/utils/env';
 import { dataTag, travelContextTag } from '../common/utils/prompt';
 import { toSimilarityScore, toVectorLiteral } from '../common/utils/vector';
@@ -63,10 +67,17 @@ export class MatchmakingService {
   }
 
   private async findRequester(id: string) {
-    return this.prisma.profile.findUnique({
+    const found = await this.prisma.profile.findUnique({
       where: { id },
-      select: REQUESTER_CONTEXT_SELECT,
+      select: { ...REQUESTER_CONTEXT_SELECT, status: true },
     });
+    if (found?.status === ProfileStatus.PENDING_VERIFICATION) {
+      throw new ForbiddenException(PENDING_VERIFICATION_MESSAGE);
+    }
+    // Verification state is access control, not matchmaking context: keep it out of the LLM prompt.
+    if (!found) return null;
+    const { status: _status, ...requester } = found;
+    return requester;
   }
 
   // Step 1: embed the query, then pgvector cosine-distance top-N.
@@ -83,10 +94,10 @@ export class MatchmakingService {
 
     const rows = await this.prisma.$queryRaw<(Profile & { distance: number })[]>(Prisma.sql`
       SELECT "id", "fullName", "headline", "bio", "city", "travelStatus", "cohort", "industry",
-             "skills", "avatarUrl", "linkedinUrl", "email",
+             "skills", "avatarUrl", "linkedinUrl", "email", "graduationYear", "status",
              ("embedding" <=> ${vector}::vector) AS "distance"
       FROM "Profile"
-      WHERE "embedding" IS NOT NULL ${exclude} ${cityFilter}
+      WHERE "embedding" IS NOT NULL AND "status" = 'ACTIVE'::"ProfileStatus" ${exclude} ${cityFilter}
       ORDER BY "embedding" <=> ${vector}::vector
       LIMIT ${CANDIDATE_LIMIT}
     `);
@@ -111,7 +122,7 @@ export class MatchmakingService {
       .join('. ');
   }
 
-  private async embed(text: string): Promise<number[]> {
+  async embed(text: string): Promise<number[]> {
     this.openai ??= requireEnvKey('OPENAI_API_KEY', (apiKey) => new OpenAI({ apiKey }));
     try {
       const res = await this.openai.embeddings.create({ model: EMBEDDING_MODEL, input: text });

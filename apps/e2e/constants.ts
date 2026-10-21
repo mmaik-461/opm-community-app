@@ -1,5 +1,6 @@
 export const WEB_PORT = 3100;
 export const API_PORT = 4100;
+export const EMBEDDINGS_STUB_PORT = 4200;
 export const WEB_URL = `http://localhost:${WEB_PORT}`;
 export const API_URL = `http://localhost:${API_PORT}`;
 
@@ -25,4 +26,15 @@ export const DEFAULT_USER = 'Anna Kowalska';
 export const PASSWORD_USER = {
   fullName: 'Oleksandr Bondarenko',
   email: 'oleksandr.bondarenko@opm-alumni.example',
+};
+
+/** Registers through the UI; the shared database is reseeded per run, so the email stays unique. */
+export const REGISTRANT = {
+  fullName: 'Zoe Registrant',
+  email: 'zoe.registrant@example.com',
+  password: 'e2e-registration-password',
+  city: 'Prague',
+  industry: 'Fintech',
+  graduationYear: '2019',
+  diplomaNumber: 'D-2019-0042',
 };

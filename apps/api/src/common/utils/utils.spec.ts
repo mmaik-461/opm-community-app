@@ -2,11 +2,19 @@ import { BadRequestException, ServiceUnavailableException } from '@nestjs/common
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../pipes/zod-validation.pipe';
-import { extractBearerToken, getAuthSecret, isDevLoginEnabled } from './auth';
+import {
+  extractBearerToken,
+  getAuthSecret,
+  isAutoVerifyEnabled,
+  isDevLoginEnabled,
+  signAccessToken,
+  verifyAccessToken,
+} from './auth';
 import { requireEnvKey } from './env';
 import { hashPassword, verifyPassword } from './password';
 import { buildPaginationMeta, pageOffset } from './pagination';
 import { equalsInsensitive } from './prisma';
+import { buildProfileEmbeddingText, cohortLabel, defaultHeadline } from './profile';
 import { dataTag, travelContextTag } from './prompt';
 import { toSimilarityScore, toVectorLiteral } from './vector';
 
@@ -163,5 +171,56 @@ describe('password hashing', () => {
     expect(await hashPassword('same')).not.toBe(await hashPassword('same'));
     expect(await verifyPassword('x', 'plaintext')).toBe(false);
     expect(await verifyPassword('x', 'bcrypt$aa$bb')).toBe(false);
+  });
+});
+
+describe('auto-verify flag', () => {
+  it('is on only for the literal string "true"', () => {
+    expect(isAutoVerifyEnabled({ AUTH_AUTO_VERIFY: 'true' })).toBe(true);
+    expect(isAutoVerifyEnabled({ AUTH_AUTO_VERIFY: '1' })).toBe(false);
+    expect(isAutoVerifyEnabled({})).toBe(false);
+  });
+});
+
+describe('signAccessToken', () => {
+  const secret = new TextEncoder().encode('x'.repeat(32));
+
+  it('round-trips through verifyAccessToken and rejects another secret', async () => {
+    const token = await signAccessToken('user-1', secret);
+    await expect(verifyAccessToken(token, secret)).resolves.toEqual({ id: 'user-1' });
+    await expect(
+      verifyAccessToken(token, new TextEncoder().encode('y'.repeat(32))),
+    ).rejects.toThrow();
+  });
+});
+
+describe('profile text helpers', () => {
+  const base = {
+    fullName: 'Nina Novak',
+    headline: 'Founder',
+    city: 'Prague',
+    cohort: 'Class of 2019',
+    industry: 'Fintech',
+    skills: ['payments'],
+    graduationYear: 2019,
+  };
+
+  it('labels the cohort and a default headline from registration data', () => {
+    expect(cohortLabel(2019)).toBe('Class of 2019');
+    expect(defaultHeadline('Fintech')).toBe('OPM alumnus, Fintech');
+  });
+
+  it('keeps a substantive bio and replaces an empty or brief one with fallback text', () => {
+    const long = 'Built a payments platform used by hundreds of merchants across CEE.';
+    expect(buildProfileEmbeddingText({ ...base, bio: long })).toMatch(
+      /Skills: payments\. Built a payments platform/,
+    );
+    const empty = buildProfileEmbeddingText({ ...base, bio: '' });
+    expect(empty).toContain(
+      'Nina Novak is an OPM alumnus (class of 2019) working in Fintech in Prague.',
+    );
+    expect(buildProfileEmbeddingText({ ...base, bio: 'Hi.' })).toContain(
+      'working in Fintech in Prague. Hi.',
+    );
   });
 });

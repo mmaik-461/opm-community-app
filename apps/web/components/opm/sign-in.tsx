@@ -5,8 +5,10 @@ import { Loader2, Network } from 'lucide-react';
 import { signIn } from 'next-auth/react';
 import type { Profile } from '@opm/shared-types';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
+  AUTH_TAB_SIGN_IN,
+  AUTH_TAB_SIGN_UP,
   CREDENTIALS_PROVIDER_ID,
   DEV_LOGIN_FAILED_MESSAGE,
   DEV_LOGIN_HEADING,
@@ -14,10 +16,14 @@ import {
   DEV_PROVIDER_ID,
   SIGN_IN_FAILED_MESSAGE,
   SIGN_IN_SUBTITLE,
+  SIGN_IN_TAB,
   SIGN_IN_TITLE,
+  SIGN_UP_TAB,
 } from '@/constants/auth';
 import { LABEL_CLASS, PRIMARY_BUTTON_CLASS } from '@/constants/ui';
 import { fetchDevProfiles } from '@/lib/api';
+import { FormField } from './form-field';
+import { RegisterForm } from './register-form';
 
 function CredentialsForm() {
   const [email, setEmail] = React.useState('');
@@ -36,32 +42,24 @@ function CredentialsForm() {
 
   return (
     <form onSubmit={(e) => void submit(e)} className="flex flex-col gap-4">
-      <div>
-        <label htmlFor="sign-in-email" className={`${LABEL_CLASS} mb-2 block`}>
-          Email
-        </label>
-        <Input
-          id="sign-in-email"
-          type="email"
-          autoComplete="username"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-      </div>
-      <div>
-        <label htmlFor="sign-in-password" className={`${LABEL_CLASS} mb-2 block`}>
-          Password
-        </label>
-        <Input
-          id="sign-in-password"
-          type="password"
-          autoComplete="current-password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-      </div>
+      <FormField
+        id="sign-in-email"
+        label="Email"
+        type="email"
+        autoComplete="username"
+        required
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+      />
+      <FormField
+        id="sign-in-password"
+        label="Password"
+        type="password"
+        autoComplete="current-password"
+        required
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+      />
       {error && (
         <p role="alert" className="text-sm text-red-700">
           {error}
@@ -129,7 +127,18 @@ export function SignIn({ devLoginEnabled }: { devLoginEnabled: boolean }) {
         <h1 className="text-lg font-semibold tracking-tight">{SIGN_IN_TITLE}</h1>
       </div>
       <p className="text-sm text-zinc-600">{SIGN_IN_SUBTITLE}</p>
-      <CredentialsForm />
+      <Tabs defaultValue={AUTH_TAB_SIGN_IN}>
+        <TabsList className="w-full">
+          <TabsTrigger value={AUTH_TAB_SIGN_IN}>{SIGN_IN_TAB}</TabsTrigger>
+          <TabsTrigger value={AUTH_TAB_SIGN_UP}>{SIGN_UP_TAB}</TabsTrigger>
+        </TabsList>
+        <TabsContent value={AUTH_TAB_SIGN_IN} className="pt-4">
+          <CredentialsForm />
+        </TabsContent>
+        <TabsContent value={AUTH_TAB_SIGN_UP} className="pt-4">
+          <RegisterForm />
+        </TabsContent>
+      </Tabs>
       {devLoginEnabled && <DevQuickLogin />}
     </main>
   );

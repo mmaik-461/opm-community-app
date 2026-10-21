@@ -18,7 +18,7 @@ Production-grade platform for the OPM alumni community: "Ask Community + AI Matc
 
 ## Environment Variables (auth)
 
-- `AUTH_SECRET` (≥ 32 chars; identical in `apps/api` and `apps/web`), `NEXTAUTH_URL` (web, production), `AUTH_DEV_LOGIN` (api) / `NEXT_PUBLIC_AUTH_DEV_LOGIN` (web), `SEED_PASSWORD` (seed only), `API_URL` (optional web server-side API origin). See `.env.example` and the README "Authentication" section.
+- `AUTH_SECRET` (≥ 32 chars; identical in `apps/api` and `apps/web`), `NEXTAUTH_URL` (web, production), `AUTH_DEV_LOGIN` (api) / `NEXT_PUBLIC_AUTH_DEV_LOGIN` (web), `AUTH_AUTO_VERIFY` (api, optional), `SEED_PASSWORD` (seed only), `API_URL` (optional web server-side API origin). See `.env.example` and the README "Authentication" section.
 
 ## Key Development Commands
 
@@ -47,6 +47,7 @@ Always execute commands using pnpm filters from the monorepo root:
 1. **Scope Boundaries:**
    - Conversations continue on external channels (LinkedIn / WhatsApp / Email); the platform owns discovery, AI icebreaker generation and intro-request tracking. No real-time chat/WebSockets.
    - Identity comes from the authenticated session, never from a payload. `apps/web` uses NextAuth (JWT session) and signs a short-lived HS256 access token (`sub` = profile id, secret `AUTH_SECRET` shared with the API); `lib/api.ts` sends it as `Authorization: Bearer`. `apps/api` has a global `AuthGuard` (opt out with `@Public()`); controllers read the user with `@CurrentUser()` and pass `user.id` to services. Never add `userId` / `requesterId` / `currentUserId` to request DTOs.
+   - Registration: public `POST /auth/register` (`RegisterDto` / `RegisterResponse` in `packages/shared-types`) creates a profile with `status = PENDING_VERIFICATION` (`ACTIVE` only when `AUTH_AUTO_VERIFY=true` on the API; seeded profiles are `ACTIVE`), required `graduationYear`, optional private `diplomaNumber` (never in `PROFILE_SELECT`), a password hash and an embedding. Duplicate email → 409. `PENDING_VERIFICATION` users may sign in and browse, but `MatchmakingService.match` and `IntrosService.create` must answer 403 (`PENDING_VERIFICATION_MESSAGE`), and only `ACTIVE` profiles are matchmaking candidates. The web shows a banner for pending users.
    - Development quick login (`dev-impersonate` provider, `/auth/dev/*`, header switcher) is on when `NODE_ENV !== 'production'` or `AUTH_DEV_LOGIN=true` (API) / `NEXT_PUBLIC_AUTH_DEV_LOGIN=true` (web); keep it gated on both sides. Standard sign-in is email + password (`Profile.passwordHash`, scrypt).
    - Location is modelled as city chips and a status ("Living in" / "Traveling to"); no GIS or map dependencies.
 2. **AI & Vector Search:**

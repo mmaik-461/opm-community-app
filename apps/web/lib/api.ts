@@ -6,6 +6,8 @@ import type {
   MatchmakingRequest,
   MatchmakingResponse,
   Profile,
+  RegisterDto,
+  RegisterResponse,
 } from '@opm/shared-types';
 import { getSession } from 'next-auth/react';
 import { DEFAULT_API_URL } from '@/constants/api';
@@ -50,6 +52,15 @@ async function request<T>(path: string, init?: RequestInit, signal?: AbortSignal
     throw new ApiError(detail || `Request failed (${res.status})`, res.status);
   }
   return (await res.json()) as T;
+}
+
+/** Public: creates a PENDING_VERIFICATION profile; the caller then signs in with the same credentials. */
+export function registerAlumnus(body: RegisterDto): Promise<RegisterResponse> {
+  return request<RegisterResponse>('/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
 }
 
 export function fetchProfiles(signal?: AbortSignal): Promise<Profile[]> {

@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import { EMPTY_REGISTER_VALUES } from '@/constants/auth';
 import { makeProfile } from '@/test/fixtures';
 import { buildQueryString, isAbortError } from './api';
 import { errorMessage } from './errors';
 import { formatDate, toPercent } from './format';
 import { firstName, initials, matchesSearch, travelLabel, uniqueValues } from './profile';
+import { buildRegisterPayload, currentYear } from './register';
 import { buildMailto, safeHttpUrl } from './url';
 
 describe('api utils', () => {
@@ -118,5 +120,39 @@ describe('url utils', () => {
   it('returns null without an email address', () => {
     expect(buildMailto(null, 'hi')).toBeNull();
     expect(buildMailto('', 'hi')).toBeNull();
+  });
+});
+
+describe('register utils', () => {
+  const values = {
+    ...EMPTY_REGISTER_VALUES,
+    fullName: ' Nina Novak ',
+    email: ' nina@example.com ',
+    password: ' keep spaces ',
+    city: ' Prague ',
+    industry: ' Fintech ',
+    graduationYear: '2019',
+  };
+
+  it('trims text, keeps the password verbatim and sends the year as a number', () => {
+    expect(buildRegisterPayload(values)).toEqual({
+      fullName: 'Nina Novak',
+      email: 'nina@example.com',
+      password: ' keep spaces ',
+      city: 'Prague',
+      industry: 'Fintech',
+      graduationYear: 2019,
+    });
+  });
+
+  it('includes the diploma number only when provided', () => {
+    expect(buildRegisterPayload({ ...values, diplomaNumber: ' D-1 ' }).diplomaNumber).toBe('D-1');
+    expect(buildRegisterPayload({ ...values, diplomaNumber: '  ' })).not.toHaveProperty(
+      'diplomaNumber',
+    );
+  });
+
+  it('reads the current year from the given date', () => {
+    expect(currentYear(new Date('2031-06-01T00:00:00Z'))).toBe(2031);
   });
 });

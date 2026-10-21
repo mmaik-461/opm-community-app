@@ -5,6 +5,13 @@ import { hashPassword } from '../src/common/utils/password';
 const prisma = new PrismaClient();
 const DIMENSIONS = 1536;
 
+/** Graduation year of each seeded cohort. */
+const COHORT_GRADUATION_YEAR: Record<string, number> = {
+  'OPM 48': 2019,
+  'OPM 50': 2020,
+  'OPM 52': 2021,
+};
+
 interface SeedProfile {
   fullName: string;
   headline: string;
@@ -322,13 +329,13 @@ async function main() {
     const linkedinUrl = `https://www.linkedin.com/in/${slug(p.fullName).replace(/\./g, '-')}`;
     const vector = `[${vectors[i].join(',')}]`;
     await prisma.$executeRaw`
-      INSERT INTO "Profile" ("id","fullName","headline","bio","city","travelStatus","cohort","industry","skills","linkedinUrl","email","passwordHash","embedding","updatedAt")
+      INSERT INTO "Profile" ("id","fullName","headline","bio","city","travelStatus","cohort","graduationYear","industry","skills","linkedinUrl","email","status","passwordHash","embedding","updatedAt")
       VALUES (gen_random_uuid()::text, ${p.fullName}, ${p.headline}, ${p.bio}, ${p.city},
-              ${p.travelStatus ?? 'LIVING_IN'}::"TravelStatus", ${p.cohort}, ${p.industry}, ${p.skills},
-              ${linkedinUrl}, ${email}, ${passwordHash}, ${vector}::vector, now())
+              ${p.travelStatus ?? 'LIVING_IN'}::"TravelStatus", ${p.cohort}, ${COHORT_GRADUATION_YEAR[p.cohort]}, ${p.industry}, ${p.skills},
+              ${linkedinUrl}, ${email}, 'ACTIVE'::"ProfileStatus", ${passwordHash}, ${vector}::vector, now())
       ON CONFLICT ("email") DO UPDATE SET
         "fullName"=EXCLUDED."fullName", "headline"=EXCLUDED."headline", "bio"=EXCLUDED."bio", "city"=EXCLUDED."city",
-        "travelStatus"=EXCLUDED."travelStatus", "cohort"=EXCLUDED."cohort", "industry"=EXCLUDED."industry",
+        "travelStatus"=EXCLUDED."travelStatus", "cohort"=EXCLUDED."cohort", "graduationYear"=EXCLUDED."graduationYear", "status"=EXCLUDED."status", "industry"=EXCLUDED."industry",
         "skills"=EXCLUDED."skills", "linkedinUrl"=EXCLUDED."linkedinUrl",
         "passwordHash"=COALESCE(EXCLUDED."passwordHash", "Profile"."passwordHash"), "embedding"=EXCLUDED."embedding", "updatedAt"=now()`;
   }

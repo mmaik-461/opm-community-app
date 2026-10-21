@@ -1,6 +1,7 @@
 'use client';
 
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { ProfileStatus } from '@opm/shared-types';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Directory } from './directory';
@@ -10,11 +11,13 @@ import { IntrosProvider } from './intros-context';
 import { Matchmaker } from './matchmaker';
 import { SignIn } from './sign-in';
 import { UserProvider, useUser } from './user-context';
+import { VerificationBanner } from './verification-banner';
 
 function Content() {
-  const { error, reload } = useUser();
+  const { currentUser, error, reload } = useUser();
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
+      {currentUser?.status === ProfileStatus.PENDING_VERIFICATION && <VerificationBanner />}
       {error && (
         <div
           role="alert"

@@ -1,45 +1,61 @@
-import { type INestApplication } from '@nestjs/common';
+import { type INestApplication, Logger } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
-import type { LoginResponse, Profile } from '@opm/shared-types';
+import type { LoginResponse, Profile, RegisterDto, RegisterResponse } from '@opm/shared-types';
 import request from 'supertest';
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthGuard } from '../common/guards/auth.guard';
-import { hashPassword } from '../common/utils/password';
+import { hashPassword, verifyPassword } from '../common/utils/password';
+import { MatchmakingService } from '../matchmaking/matchmaking.service';
 import { HealthController } from '../health/health.controller';
 import { HealthService } from '../health/health.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { createFakePrisma } from '../test/fake-prisma';
+import { createFakePrisma, type FakePrisma, type StoredProfile } from '../test/fake-prisma';
+import { verifyAccessToken } from '../common/utils/auth';
 import { makeProfile } from '../test/fixtures';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 
+const sdk = vi.hoisted(() => ({ embeddingsCreate: vi.fn() }));
+vi.mock('openai', () => ({
+  default: class {
+    embeddings = { create: sdk.embeddingsCreate };
+  },
+}));
+
 const PASSWORD = 'correct horse battery staple';
+const EMBEDDING = [0.5, 0.25];
+
+const registration = (overrides: Partial<RegisterDto> = {}): RegisterDto => ({
+  email: 'New.Person@Example.com',
+  password: 'a-long-enough-password',
+  fullName: 'New Person',
+  city: 'Lisbon',
+  industry: 'Fintech',
+  graduationYear: 2019,
+  ...overrides,
+});
 
 describe('Auth API (controller + service + guard over HTTP)', () => {
   let app: INestApplication;
   let http: ReturnType<typeof request>;
+  let db: FakePrisma;
+  let profiles: StoredProfile[];
 
   beforeAll(async () => {
-    const db = createFakePrisma([
+    // Only Alice can use a password; Bob has none (e.g. never invited).
+    profiles = [
       makeProfile({ id: 'alice', fullName: 'Alice A', email: 'alice@example.com' }),
       makeProfile({ id: 'bob', fullName: 'Bob B', email: 'bob@example.com' }),
-    ]);
-    // Only Alice can use a password; Bob has none (e.g. never invited).
-    const withHash = [{ id: 'alice', passwordHash: await hashPassword(PASSWORD) }];
-    const original = db.profile.findUnique;
-    db.profile.findUnique = async (args) => {
-      const row = await original(args);
-      const extra = withHash.find((h) => h.id === row?.id);
-      return row && args.select?.passwordHash
-        ? { ...row, passwordHash: extra?.passwordHash ?? null }
-        : row;
-    };
+    ];
+    Object.assign(profiles[0], { passwordHash: await hashPassword(PASSWORD) });
+    db = createFakePrisma(profiles);
 
     const moduleRef = await Test.createTestingModule({
       controllers: [AuthController, HealthController],
       providers: [
         AuthService,
+        MatchmakingService,
         { provide: PrismaService, useValue: db },
         { provide: HealthService, useValue: { check: () => ({ status: 'ok' }) } },
         { provide: APP_GUARD, useClass: AuthGuard },
@@ -51,6 +67,12 @@ describe('Auth API (controller + service + guard over HTTP)', () => {
   });
 
   afterAll(() => app.close());
+  beforeEach(() => {
+    profiles.length = 2; // drop profiles registered by earlier tests
+    vi.stubEnv('OPENAI_API_KEY', 'test-openai');
+    sdk.embeddingsCreate.mockReset();
+    sdk.embeddingsCreate.mockResolvedValue({ data: [{ embedding: EMBEDDING }] });
+  });
   afterEach(() => vi.unstubAllEnvs());
 
   describe('POST /auth/login', () => {
@@ -79,6 +101,122 @@ describe('Auth API (controller + service + guard over HTTP)', () => {
     it('validates the payload shape (400)', async () => {
       await login({ email: 'not-an-email', password: 'x' }).expect(400);
       await login({ email: 'alice@example.com' }).expect(400);
+    });
+  });
+
+  describe('POST /auth/register', () => {
+    const register = (body: object) => http.post('/auth/register').send(body);
+    const stored = (email: string) =>
+      (
+        db.profile as unknown as { findUnique: (a: object) => Promise<Record<string, unknown>> }
+      ).findUnique({
+        where: { email },
+        select: {
+          id: true,
+          status: true,
+          passwordHash: true,
+          diplomaNumber: true,
+          cohort: true,
+          headline: true,
+        },
+      });
+
+    it('creates a PENDING_VERIFICATION profile, embeds it and returns a usable access token', async () => {
+      const res = await register(registration({ diplomaNumber: 'D-123', bio: 'Short.' })).expect(
+        201,
+      );
+      const { accessToken, profile } = res.body as RegisterResponse;
+
+      expect(profile).toMatchObject({
+        fullName: 'New Person',
+        email: 'new.person@example.com',
+        status: 'PENDING_VERIFICATION',
+        graduationYear: 2019,
+        cohort: 'Class of 2019',
+        headline: 'OPM alumnus, Fintech',
+      });
+      expect(JSON.stringify(res.body)).not.toMatch(/scrypt|passwordHash|diploma|D-123/);
+      await expect(
+        verifyAccessToken(accessToken, new TextEncoder().encode(process.env.AUTH_SECRET)),
+      ).resolves.toEqual({
+        id: profile.id,
+      });
+
+      const row = await stored('new.person@example.com');
+      expect(row.diplomaNumber).toBe('D-123');
+      expect(await verifyPassword('a-long-enough-password', row.passwordHash as string)).toBe(true);
+      expect(db.embeddings.get(profile.id)).toBe('[0.5,0.25]');
+    });
+
+    it('embeds profile attributes, padding a brief bio with descriptive fallback text', async () => {
+      await register(
+        registration({ email: 'brief@example.com', bio: 'Short.', skills: ['payments', 'KYC'] }),
+      ).expect(201);
+      const { input } = sdk.embeddingsCreate.mock.calls[0][0] as { input: string };
+      expect(input).toContain('New Person');
+      expect(input).toContain('Skills: payments, KYC');
+      expect(input).toContain(
+        'New Person is an OPM alumnus (class of 2019) working in Fintech in Lisbon.',
+      );
+      expect(input).toContain('Short.');
+    });
+
+    it('uses the bio verbatim once it is long enough to carry signal', async () => {
+      const bio = 'Built and sold a payments company, now angel investing in CEE fintech founders.';
+      await register(registration({ email: 'long@example.com', bio })).expect(201);
+      const { input } = sdk.embeddingsCreate.mock.calls[0][0] as { input: string };
+      expect(input).toContain(bio);
+      expect(input).not.toContain('is an OPM alumnus');
+    });
+
+    it('activates the profile only when AUTH_AUTO_VERIFY=true', async () => {
+      vi.stubEnv('AUTH_AUTO_VERIFY', 'true');
+      const res = await register(registration({ email: 'auto@example.com' })).expect(201);
+      expect((res.body as RegisterResponse).profile.status).toBe('ACTIVE');
+    });
+
+    it('rejects an email that is already registered with 409, in any letter case', async () => {
+      await register(registration({ email: 'dupe@example.com' })).expect(201);
+      const res = await register(registration({ email: 'DUPE@example.com' })).expect(409);
+      expect((res.body as { message: string }).message).toBe(
+        'An account with this email already exists',
+      );
+      await register(registration({ email: 'alice@example.com' })).expect(409);
+    });
+
+    it('rejects invalid payloads with 400 and creates nothing', async () => {
+      const before = sdk.embeddingsCreate.mock.calls.length;
+      const invalid: object[] = [
+        registration({ email: 'not-an-email' }),
+        registration({ password: 'short' }),
+        registration({ fullName: '   ' }),
+        registration({ city: '' }),
+        registration({ industry: undefined }),
+        registration({ graduationYear: undefined }),
+        registration({ graduationYear: 1850 }),
+        registration({ graduationYear: new Date().getFullYear() + 1 }),
+        { ...registration(), graduationYear: '2019' },
+        registration({ skills: 'payments' as unknown as string[] }),
+      ];
+      for (const body of invalid) await register(body).expect(400);
+      expect(sdk.embeddingsCreate.mock.calls.length).toBe(before);
+      expect(await stored('not-an-email')).toBeNull();
+    });
+
+    it('saves nothing when the embedding service fails', async () => {
+      sdk.embeddingsCreate.mockRejectedValue(new Error('boom'));
+      vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+      await register(registration({ email: 'noembed@example.com' })).expect(502);
+      expect(await stored('noembed@example.com')).toBeNull();
+    });
+
+    it('lets the new alumnus sign in with the registered password', async () => {
+      await register(registration({ email: 'login@example.com' })).expect(201);
+      const res = await http
+        .post('/auth/login')
+        .send({ email: 'login@example.com', password: 'a-long-enough-password' });
+      expect(res.status).toBe(200);
+      expect((res.body as LoginResponse).profile.status).toBe('PENDING_VERIFICATION');
     });
   });
 

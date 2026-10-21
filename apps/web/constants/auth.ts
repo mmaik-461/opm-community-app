@@ -17,3 +17,31 @@ export const DEV_LOGIN_FAILED_MESSAGE =
   'Quick login failed. Is the API running with dev login enabled?';
 export const DEV_LOGIN_HEADING = 'Development quick login';
 export const DEV_LOGIN_HINT = 'Visible outside production only. Pick any alumnus to act as.';
+
+export const SIGN_IN_TAB = 'Sign in';
+export const SIGN_UP_TAB = 'Sign up';
+export const SIGN_UP_SUBMIT_LABEL = 'Create account';
+export const SIGN_UP_SIGN_IN_FAILED_MESSAGE =
+  'Your account was created, but signing in failed. Please use the Sign in tab.';
+export const SIGN_UP_PASSWORD_HINT = 'At least 8 characters.';
+export const DIPLOMA_NUMBER_HINT = 'Helps us verify you faster.';
+
+export const PASSWORD_MIN_LENGTH = 8;
+export const GRADUATION_YEAR_MIN = 1980;
+
+export const AUTH_TAB_SIGN_IN = 'sign-in';
+export const AUTH_TAB_SIGN_UP = 'sign-up';
+
+export const EMPTY_REGISTER_VALUES = {
+  fullName: '',
+  email: '',
+  password: '',
+  city: '',
+  industry: '',
+  graduationYear: '',
+  diplomaNumber: '',
+};
+
+export const VERIFICATION_BANNER_TITLE = 'Your account is awaiting alumni verification';
+export const VERIFICATION_BANNER_MESSAGE =
+  'You can browse the community now. AI matchmaking and intro requests unlock as soon as an administrator verifies your alumni status.';

@@ -15,6 +15,11 @@ import { IntrosService } from './intros.service';
 const alice = makeProfile({ id: 'alice', fullName: 'Alice A' });
 const bob = makeProfile({ id: 'bob', fullName: 'Bob B' });
 const carol = makeProfile({ id: 'carol', fullName: 'Carol C' });
+const pending = makeProfile({
+  id: 'pending',
+  fullName: 'Paula Pending',
+  status: 'PENDING_VERIFICATION',
+});
 
 const payload = (targetId: string) => ({
   targetId,
@@ -29,7 +34,7 @@ describe('Intros API (controller + service over HTTP)', () => {
   let auth: Record<string, [string, string]>;
 
   beforeAll(async () => {
-    db = createFakePrisma([alice, bob, carol]);
+    db = createFakePrisma([alice, bob, carol, pending]);
     const moduleRef = await Test.createTestingModule({
       controllers: [IntrosController],
       providers: [
@@ -45,6 +50,7 @@ describe('Intros API (controller + service over HTTP)', () => {
       alice: await bearer('alice'),
       bob: await bearer('bob'),
       carol: await bearer('carol'),
+      pending: await bearer('pending'),
       ghost: await bearer('ghost'),
     };
   });
@@ -90,6 +96,16 @@ describe('Intros API (controller + service over HTTP)', () => {
         target: { id: 'bob' },
       });
       expect(db.intros).toHaveLength(1);
+    });
+
+    it('blocks a PENDING_VERIFICATION requester with 403 and a clear message', async () => {
+      const res = await send('pending', 'bob').expect(403);
+      expect(res.body.message).toMatch(/awaiting alumni verification/i);
+      expect(db.intros).toHaveLength(0);
+    });
+
+    it('lets a verified alumnus request an intro to a pending one', async () => {
+      await send('alice', 'pending').expect(201);
     });
 
     it('rejects a self-request with 400 and stores nothing', async () => {

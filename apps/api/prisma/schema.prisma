@@ -14,6 +14,11 @@ enum TravelStatus {
   TRAVELING_TO
 }
 
+enum ProfileStatus {
+  ACTIVE
+  PENDING_VERIFICATION
+}
+
 enum IntroStatus {
   PENDING
   ACCEPTED
@@ -28,11 +33,16 @@ model Profile {
   city           String
   travelStatus   TravelStatus                 @default(LIVING_IN)
   cohort         String
+  graduationYear Int
   industry       String
   skills         String[]
   avatarUrl      String?
   linkedinUrl    String?
   email          String?                      @unique
+  /// New registrations start as PENDING_VERIFICATION until an admin verifies the alumnus.
+  status         ProfileStatus                @default(PENDING_VERIFICATION)
+  /// Verification identifier supplied at registration; never returned by the public API.
+  diplomaNumber  String?
   /// scrypt hash (`scrypt$salt$key`); null disables password sign-in for the profile.
   passwordHash   String?
   embedding      Unsupported("vector(1536)")?

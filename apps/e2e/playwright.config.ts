@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 import {
   API_PORT,
+  EMBEDDINGS_STUB_PORT,
   E2E_AUTH_SECRET,
   E2E_SEED_PASSWORD,
   API_URL,
@@ -10,9 +11,13 @@ import {
   WEB_URL,
 } from './constants';
 
-// The AI keys are blanked on purpose: the seed then uses deterministic embeddings and the
-// API can never reach OpenAI/Anthropic from a test run (the matchmaker journey stubs /matchmaking).
-const aiOff = { OPENAI_API_KEY: '', ANTHROPIC_API_KEY: '' };
+// No real AI key is ever used: the seed runs keyless (deterministic embeddings), registration embeds
+// through a local OpenAI-compatible stub, and the matchmaker journey stubs /matchmaking.
+const aiOff = {
+  ANTHROPIC_API_KEY: '',
+  OPENAI_API_KEY: 'e2e-embeddings-stub-key',
+  OPENAI_BASE_URL: `http://localhost:${EMBEDDINGS_STUB_PORT}/v1`,
+};
 
 export default defineConfig({
   testDir: './tests',
@@ -30,7 +35,15 @@ export default defineConfig({
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: [
     {
-      command: 'node scripts/prepare-db.mjs && pnpm --filter api build && pnpm --filter api start',
+      command: 'node scripts/embeddings-stub.mjs',
+      url: `http://localhost:${EMBEDDINGS_STUB_PORT}`,
+      timeout: SERVER_START_TIMEOUT_MS,
+      reuseExistingServer: false,
+      env: { EMBEDDINGS_STUB_PORT: String(EMBEDDINGS_STUB_PORT) },
+    },
+    {
+      command:
+        'OPENAI_API_KEY= node scripts/prepare-db.mjs && pnpm --filter api build && pnpm --filter api start',
       url: `${API_URL}/health`,
       timeout: SERVER_START_TIMEOUT_MS,
       reuseExistingServer: false,
