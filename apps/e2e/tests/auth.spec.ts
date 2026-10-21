@@ -1,7 +1,15 @@
 import { expect, test } from '@playwright/test';
 import { API_URL, DEFAULT_USER, E2E_SEED_PASSWORD, PASSWORD_USER } from '../constants';
 import { fetchProfiles } from '../utils/api';
-import { openApp, openSection, quickLogin } from '../utils/app';
+import {
+  accountMenu,
+  expectSignedInAs,
+  openAccountMenu,
+  openApp,
+  openSection,
+  quickLogin,
+  signOut,
+} from '../utils/app';
 
 test.describe('Authentication', () => {
   test('shows only the sign-in screen to an anonymous visitor', async ({ page }) => {
@@ -27,9 +35,7 @@ test.describe('Authentication', () => {
     await quickLogin(page, first.fullName);
     await expect(page).toHaveURL('/directory');
     await expect(page).toHaveTitle(/Alumni Directory/);
-    await expect(page.getByRole('button', { name: 'Switch current user' })).toContainText(
-      first.fullName,
-    );
+    await expectSignedInAs(page, first.fullName);
   });
 
   test('keeps signed-in users off /login and /register', async ({ page }) => {
@@ -61,7 +67,7 @@ test.describe('Authentication', () => {
 
     // A deep link renders the section directly, signed in, after a full load.
     await page.goto('/intros');
-    await expect(page.getByRole('button', { name: 'Switch current user' })).toBeVisible();
+    await expect(accountMenu(page)).toBeVisible();
     await expect(page.getByRole('link', { name: /^My Intros/ })).toHaveAttribute(
       'aria-current',
       'page',
@@ -77,6 +83,34 @@ test.describe('Authentication', () => {
     expect(html).toContain('Primary');
   });
 
+  test('puts every account action in one avatar dropdown', async ({ page }) => {
+    await openApp(page);
+    await expect(page.getByRole('button', { name: 'Edit profile' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Sign out' })).toHaveCount(0);
+
+    const menu = await openAccountMenu(page);
+    await expect(menu.getByText(DEFAULT_USER, { exact: true })).toBeVisible(); // identity label
+    await expect(menu.getByText('Member', { exact: true })).toBeVisible();
+    await expect(menu.getByRole('menuitem', { name: 'Edit profile' })).toBeVisible();
+    await expect(menu.getByText('Acting as (Dev)')).toBeVisible();
+    await expect(
+      menu.getByRole('menuitemradio', { name: new RegExp(`^${DEFAULT_USER}`) }),
+    ).toBeChecked();
+    await expect(menu.getByRole('menuitem', { name: 'Sign out' })).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await expect(menu).toBeHidden();
+    await expect(accountMenu(page)).toBeFocused();
+
+    await accountMenu(page).click();
+    await expect(menu).toBeVisible();
+    // Radix ignores outside clicks for a few ms after opening, so retry the click until it lands.
+    await expect(async () => {
+      await page.mouse.click(5, 300); // click outside
+      await expect(menu).toBeHidden({ timeout: 500 });
+    }).toPass();
+  });
+
   test('signs in with email and password, survives a reload, and signs out', async ({ page }) => {
     await page.goto('/');
     await page.getByLabel('Email').fill(PASSWORD_USER.email);
@@ -88,17 +122,13 @@ test.describe('Authentication', () => {
 
     await page.getByLabel('Password').fill(E2E_SEED_PASSWORD);
     await page.getByRole('button', { name: 'Sign in' }).click();
-    await expect(page.getByRole('button', { name: 'Switch current user' })).toContainText(
-      PASSWORD_USER.fullName,
-    );
+    await expectSignedInAs(page, PASSWORD_USER.fullName);
 
     // The session is a cookie, so it outlives the page.
     await page.reload();
-    await expect(page.getByRole('button', { name: 'Switch current user' })).toContainText(
-      PASSWORD_USER.fullName,
-    );
+    await expectSignedInAs(page, PASSWORD_USER.fullName);
 
-    await page.getByRole('button', { name: 'Sign out' }).click();
+    await signOut(page);
     await expect(page).toHaveURL('/login');
     await expect(
       page.getByRole('heading', { name: /Sign in to the OPM Community Hub/ }),
@@ -113,9 +143,7 @@ test.describe('Authentication', () => {
     const [first] = await fetchProfiles(request);
     await page.goto('/');
     await quickLogin(page, first.fullName);
-    await expect(page.getByRole('button', { name: 'Switch current user' })).toContainText(
-      first.fullName,
-    );
+    await expectSignedInAs(page, first.fullName);
   });
 
   test('the API rejects unauthenticated and forged requests', async ({ request }) => {

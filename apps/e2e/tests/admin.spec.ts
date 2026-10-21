@@ -1,10 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { ADMIN_USER, APPLICANT, DEFAULT_USER } from '../constants';
 import { fetchProfiles } from '../utils/api';
-import { actAs, openApp, openSection } from '../utils/app';
+import { actAs, expectSignedInAs, openApp, openSection } from '../utils/app';
 import { stubMatchmaking } from '../utils/matchmaking-stub';
-
-const SWITCHER = 'Switch current user';
 
 test.describe('Admin verification panel', () => {
   test('members see no Verifications tab and are denied at /admin', async ({ page }) => {
@@ -32,7 +30,7 @@ test.describe('Admin verification panel', () => {
     await page.getByLabel('Graduation year').fill(APPLICANT.graduationYear);
     await page.getByLabel('Diploma ID (optional)').fill(APPLICANT.diplomaNumber);
     await page.getByRole('button', { name: 'Create account' }).click();
-    await expect(page.getByRole('button', { name: SWITCHER })).toContainText(APPLICANT.fullName);
+    await expectSignedInAs(page, APPLICANT.fullName);
     await expect(page.getByRole('status')).toContainText('awaiting alumni verification');
     await expect(page.getByRole('link', { name: /^Verifications/ })).toHaveCount(0);
 

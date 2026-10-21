@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { PROFILE_EDITOR } from '../constants';
-import { actAs, openApp, openSection } from '../utils/app';
+import { actAs, expectSignedInAs, openApp, openEditProfile, openSection } from '../utils/app';
 
 const NEW_BIO = 'Now advising climate-tech founders on cross-border expansion and fundraising.';
 const NEW_SKILLS = ['climate finance', 'market entry', 'board advisory'];
@@ -10,7 +10,7 @@ test.describe('Profile editing', () => {
     await openApp(page);
     await actAs(page, PROFILE_EDITOR);
 
-    await page.getByRole('button', { name: 'Edit profile' }).click();
+    await openEditProfile(page);
     const dialog = page.getByRole('dialog', { name: 'Edit your profile' });
     await expect(dialog.getByLabel('Full name')).toHaveValue(PROFILE_EDITOR);
     await expect(dialog.getByRole('button', { name: 'Save changes' })).toBeDisabled();
@@ -31,10 +31,8 @@ test.describe('Profile editing', () => {
     // ...and after a full reload they come back from the database.
     await page.reload();
     await expect(page.getByRole('heading', { name: 'OPM Community Hub' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Switch current user' })).toContainText(
-      PROFILE_EDITOR,
-    );
-    await page.getByRole('button', { name: 'Edit profile' }).click();
+    await expectSignedInAs(page, PROFILE_EDITOR);
+    await openEditProfile(page);
     const reopened = page.getByRole('dialog', { name: 'Edit your profile' });
     await expect(reopened.getByLabel('Bio')).toHaveValue(NEW_BIO);
     await expect(reopened.getByLabel('Skills')).toHaveValue(NEW_SKILLS.join(', '));

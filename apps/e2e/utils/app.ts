@@ -14,12 +14,12 @@ export async function quickLogin(page: Page, fullName: string) {
  */
 export async function openApp(page: Page, signInAs: string = DEFAULT_USER) {
   await page.goto('/');
-  const switcher = page.getByRole('button', { name: 'Switch current user' });
+  const menu = accountMenu(page);
   const signIn = page.getByRole('button', { name: new RegExp(`^Continue as ${signInAs}`) });
-  await expect(switcher.or(signIn)).toBeVisible();
+  await expect(menu.or(signIn)).toBeVisible();
   if (await signIn.isVisible()) await signIn.click();
   await expect(page.getByRole('heading', { name: 'OPM Community Hub' })).toBeVisible();
-  await expect(switcher).toBeEnabled();
+  await expect(menu).toBeEnabled();
 }
 
 const SECTION_PATH: Record<AppSection, string> = {
@@ -35,10 +35,34 @@ export async function openSection(page: Page, section: AppSection) {
   await expect(page).toHaveURL(SECTION_PATH[section]);
 }
 
-/** Uses the header "acting as" switcher, exactly like a person would. */
+/** The circular avatar button in the header; its accessible name carries the signed-in user's name. */
+export const accountMenu = (page: Page) => page.getByRole('button', { name: /^Account menu/ });
+
+export async function expectSignedInAs(page: Page, fullName: string) {
+  await expect(accountMenu(page)).toHaveAccessibleName(`Account menu, ${fullName}`);
+}
+
+/** Opens the avatar dropdown; every account action (edit, switch user, sign out) lives in it. */
+export async function openAccountMenu(page: Page) {
+  await accountMenu(page).click();
+  const menu = page.getByRole('menu');
+  await expect(menu).toBeVisible();
+  return menu;
+}
+
+export async function openEditProfile(page: Page) {
+  const menu = await openAccountMenu(page);
+  await menu.getByRole('menuitem', { name: 'Edit profile' }).click();
+}
+
+export async function signOut(page: Page) {
+  const menu = await openAccountMenu(page);
+  await menu.getByRole('menuitem', { name: 'Sign out' }).click();
+}
+
+/** Uses the dev "Acting as" list in the avatar menu, exactly like a person would. */
 export async function actAs(page: Page, fullName: string) {
-  const switcher = page.getByRole('button', { name: 'Switch current user' });
-  await switcher.click();
-  await page.getByRole('menuitem', { name: new RegExp(`^${fullName}`) }).click();
-  await expect(switcher).toContainText(fullName);
+  const menu = await openAccountMenu(page);
+  await menu.getByRole('menuitemradio', { name: new RegExp(`^${fullName}`) }).click();
+  await expectSignedInAs(page, fullName);
 }

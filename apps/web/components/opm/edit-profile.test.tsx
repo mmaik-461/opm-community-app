@@ -5,7 +5,7 @@ import { jsonError, stubApi } from '@/test/api-fake';
 import { makeProfile } from '@/test/fixtures';
 import { testAccessToken } from '@/test/next-auth';
 import { renderWithProviders } from '@/test/render';
-import { EditProfile } from './edit-profile';
+import { UserMenu } from './user-menu';
 import { useUser } from './user-context';
 
 const me = makeProfile({
@@ -18,13 +18,13 @@ const me = makeProfile({
   skills: ['payments', 'fundraising'],
 });
 
-/** Mirrors the header: shows the action for the signed-in user plus what the directory now holds. */
+/** The account menu opens the dialog; the paragraph shows what the directory now holds. */
 function Harness() {
   const { currentUser } = useUser();
   if (!currentUser) return null;
   return (
     <>
-      <EditProfile profile={currentUser} />
+      <UserMenu />
       <p data-testid="live-bio">{currentUser.bio}</p>
     </>
   );
@@ -37,7 +37,8 @@ function setup(routes: Record<string, unknown> = {}) {
 }
 
 async function openDialog(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(await screen.findByRole('button', { name: 'Edit profile' }));
+  await user.click(await screen.findByRole('button', { name: /^Account menu/ }));
+  await user.click(await screen.findByRole('menuitem', { name: 'Edit profile' }));
   return screen.findByRole('dialog', { name: 'Edit your profile' });
 }
 

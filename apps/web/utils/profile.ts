@@ -1,5 +1,6 @@
 import type { Profile } from '@opm/shared-types';
 import type { FilterKey } from '@/constants/directory';
+import { ACCOUNT_MENU_LABEL } from '@/constants/user-menu';
 
 export function initials(name: string): string {
   return name
@@ -8,6 +9,11 @@ export function initials(name: string): string {
     .slice(0, 2)
     .map((w) => w[0]!.toUpperCase())
     .join('');
+}
+
+/** "Account menu, Anna K": the avatar button's accessible name, so assistive tech announces who is signed in. */
+export function accountMenuLabel(profile: Profile | null): string {
+  return profile ? `${ACCOUNT_MENU_LABEL}, ${profile.fullName}` : ACCOUNT_MENU_LABEL;
 }
 
 export function travelLabel(status: Profile['travelStatus']): string {

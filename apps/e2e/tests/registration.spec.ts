@@ -1,7 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { REGISTRANT } from '../constants';
-
-const SWITCHER = 'Switch current user';
+import { accountMenu, expectSignedInAs, signOut } from '../utils/app';
 
 test.describe('Registration and verification', () => {
   test('a new alumnus signs up, lands in the app as pending, and is blocked from matchmaking', async ({
@@ -31,7 +30,7 @@ test.describe('Registration and verification', () => {
     await expect(
       page.getByRole('alert').filter({ hasText: 'meets every requirement' }),
     ).toBeVisible();
-    await expect(page.getByRole('button', { name: SWITCHER })).toHaveCount(0);
+    await expect(accountMenu(page)).toHaveCount(0);
 
     // A strong password satisfies every rule, but a mismatching confirmation still blocks sign-up.
     await password.fill(REGISTRANT.password);
@@ -39,7 +38,7 @@ test.describe('Registration and verification', () => {
     await confirm.fill(`${REGISTRANT.password}x`);
     await expect(page.getByText('Passwords do not match.')).toBeVisible();
     await page.getByRole('button', { name: 'Create account' }).click();
-    await expect(page.getByRole('button', { name: SWITCHER })).toHaveCount(0);
+    await expect(accountMenu(page)).toHaveCount(0);
 
     // The eye toggle reveals what was typed.
     await page.getByRole('button', { name: 'Show password', exact: true }).click();
@@ -48,7 +47,7 @@ test.describe('Registration and verification', () => {
     await confirm.fill(REGISTRANT.password);
     await page.getByRole('button', { name: 'Create account' }).click();
 
-    await expect(page.getByRole('button', { name: SWITCHER })).toContainText(REGISTRANT.fullName);
+    await expectSignedInAs(page, REGISTRANT.fullName);
     await expect(page.getByRole('status')).toContainText('awaiting alumni verification');
 
     // The pending state survives a reload (the session is a cookie).
@@ -69,8 +68,8 @@ test.describe('Registration and verification', () => {
     await page.getByLabel('Email').fill(REGISTRANT.email);
     await page.getByLabel('Password').fill(REGISTRANT.password);
     await page.getByRole('button', { name: 'Sign in' }).click();
-    await expect(page.getByRole('button', { name: SWITCHER })).toContainText(REGISTRANT.fullName);
-    await page.getByRole('button', { name: 'Sign out' }).click();
+    await expectSignedInAs(page, REGISTRANT.fullName);
+    await signOut(page);
 
     await page.getByRole('link', { name: 'Sign up' }).click();
     await page.getByLabel('Full name').fill('Someone Else');
@@ -89,7 +88,7 @@ test.describe('Registration and verification', () => {
   test('quick-login alumni are verified and see no banner', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: /^Continue as Anna Kowalska/ }).click();
-    await expect(page.getByRole('button', { name: SWITCHER })).toBeEnabled();
+    await expect(accountMenu(page)).toBeEnabled();
     await expect(page.getByRole('status')).toHaveCount(0);
   });
 });

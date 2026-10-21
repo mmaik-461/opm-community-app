@@ -19,6 +19,11 @@ const renderLayout = (
 ) => render(<AppLayout {...props}>{page}</AppLayout>);
 
 const link = (name: RegExp) => screen.findAllByRole('link', { name });
+const accountMenu = () => screen.findByRole('button', { name: /^Account menu/ });
+const openAccountMenu = async (user: ReturnType<typeof userEvent.setup>) => {
+  await user.click(await accountMenu());
+  return screen.findByRole('menu');
+};
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -44,9 +49,7 @@ describe('AppLayout', () => {
     renderLayout({ initialProfiles: [alice, bob] });
 
     // Rendered immediately, with no loading state and no /profiles request.
-    expect(screen.getByRole('button', { name: 'Switch current user' })).toHaveTextContent(
-      'Alice Active',
-    );
+    expect(screen.getByRole('button', { name: 'Account menu, Alice Active' })).toBeInTheDocument();
     await waitFor(() => expect(api.calls.map((c) => c.path)).toContain('/intros'));
     expect(api.calls.map((c) => c.path)).not.toContain('/profiles');
   });
@@ -57,9 +60,9 @@ describe('AppLayout', () => {
     renderLayout({ initialProfiles: null });
 
     await waitFor(() => expect(api.calls.map((c) => c.path)).toContain('/profiles'));
-    expect(await screen.findByRole('button', { name: 'Switch current user' })).toHaveTextContent(
-      'Alice Active',
-    );
+    expect(
+      await screen.findByRole('button', { name: 'Account menu, Alice Active' }),
+    ).toBeInTheDocument();
   });
 
   it('shows a retryable error when the directory cannot be loaded', async () => {
@@ -84,7 +87,8 @@ describe('AppLayout', () => {
     setMockSession('alice');
     renderLayout();
 
-    await user.click(await screen.findByRole('button', { name: 'Sign out' }));
+    await openAccountMenu(user);
+    await user.click(await screen.findByRole('menuitem', { name: 'Sign out' }));
     expect(signOut).toHaveBeenCalledWith({ redirect: false });
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/login'));
     expect(router.refresh).toHaveBeenCalled();
@@ -174,15 +178,13 @@ describe('development impersonation', () => {
     setMockSession('alice');
     renderLayout();
 
-    await user.click(await screen.findByRole('button', { name: 'Switch current user' }));
-    await user.click(await screen.findByRole('menuitem', { name: /Bob Receiver/ }));
+    await openAccountMenu(user);
+    await user.click(await screen.findByRole('menuitemradio', { name: /Bob Receiver/ }));
 
     expect(signIn).toHaveBeenCalledWith('dev-impersonate', { profileId: 'bob', redirect: false });
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Switch current user' })).toHaveTextContent(
-        'Bob Receiver',
-      ),
-    );
+    expect(
+      await screen.findByRole('button', { name: 'Account menu, Bob Receiver' }),
+    ).toBeInTheDocument();
     await waitFor(() =>
       expect(
         api.calls.some(
@@ -194,15 +196,18 @@ describe('development impersonation', () => {
     );
   });
 
-  it('is hidden in production, where the header shows the signed-in user instead', async () => {
+  it('is not offered in production', async () => {
+    const user = userEvent.setup();
     vi.stubEnv('NODE_ENV', 'production');
     stubApi({ ...signedInRoutes, 'GET /auth/dev/profiles': jsonError(404, 'Not Found') });
     setMockSession('alice');
     renderLayout();
 
-    expect(await screen.findByText('Alice Active')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Switch current user' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
+    const menu = await openAccountMenu(user);
+    expect(within(menu).getByText('Alice Active')).toBeInTheDocument();
+    expect(screen.queryByText(/Acting as/)).not.toBeInTheDocument();
+    expect(screen.queryAllByRole('menuitemradio')).toHaveLength(0);
+    expect(screen.getByRole('menuitem', { name: 'Sign out' })).toBeInTheDocument();
   });
 });
 
