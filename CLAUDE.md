@@ -63,6 +63,7 @@ Always execute commands using pnpm filters from the monorepo root:
 ## Code Style & Conventions
 
 - Frontend:
+  - Route boundaries: `app/not-found.tsx` (styled 404) and `app/loading.tsx` (skeleton fallback) live at the app root; copy lives in `constants/ui.ts`.
   - Server Components by default; add `'use client'` only when state/interactivity is required.
   - UI components from shadcn/ui (`apps/web/components/ui`).
 - Backend:
