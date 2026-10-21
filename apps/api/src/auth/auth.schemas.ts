@@ -2,6 +2,7 @@ import { PASSWORD_RULES } from '@opm/shared-types';
 import { z } from 'zod';
 import { PASSWORD_MAX_LENGTH } from '../common/constants/auth';
 import { REGISTRATION_LIMITS as LIMITS } from '../common/constants/profiles';
+import { requiredText } from '../common/utils/zod';
 
 export const loginSchema = z.object({
   email: z.string().trim().toLowerCase().max(254).pipe(z.email()),
@@ -11,8 +12,6 @@ export const loginSchema = z.object({
 export const devLoginSchema = z.object({
   profileId: z.string().trim().min(1).max(100),
 });
-
-const requiredText = (max: number) => z.string().trim().min(1).max(max);
 
 /** One issue per unmet rule, so the 400 lists exactly which criteria failed. */
 const strongPassword = PASSWORD_RULES.reduce(

@@ -25,8 +25,9 @@ export function stubApi(routes: Record<string, Handler | unknown>) {
         status: 404,
       });
     }
-    const payload =
-      typeof route === 'function' ? (route as Handler)({ url, method, body, headers }) : route;
+    const payload = await (typeof route === 'function'
+      ? (route as Handler)({ url, method, body, headers })
+      : route);
     if (payload instanceof Response) return payload;
     return new Response(JSON.stringify(payload), { status: 200 });
   });

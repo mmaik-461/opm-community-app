@@ -8,6 +8,7 @@ import { AuthGuard } from '../common/guards/auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { IntrosController } from '../intros/intros.controller';
 import { IntrosService } from '../intros/intros.service';
+import { MatchmakingService } from '../matchmaking/matchmaking.service';
 import { ProfilesController } from '../profiles/profiles.controller';
 import { ProfilesService } from '../profiles/profiles.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -45,6 +46,7 @@ describe('Admin verification API (controller + service + guards over HTTP)', () 
         AdminService,
         IntrosService,
         ProfilesService,
+        MatchmakingService,
         { provide: PrismaService, useValue: db },
         { provide: APP_GUARD, useClass: AuthGuard },
         { provide: APP_GUARD, useClass: RolesGuard },

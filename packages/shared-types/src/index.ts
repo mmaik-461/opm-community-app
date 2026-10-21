@@ -35,6 +35,31 @@ export interface Profile {
   email: string | null;
 }
 
+/** Length limits for the free-text profile fields, enforced by the API and mirrored by the web forms. */
+export const PROFILE_LIMITS = {
+  fullName: 120,
+  city: 100,
+  industry: 100,
+  headline: 160,
+  bio: 2000,
+  skill: 60,
+  maxSkills: 20,
+} as const;
+
+/**
+ * Editable profile fields for `PATCH /profiles/me`; send only what changed. The owner is the
+ * authenticated user, and identity/verification fields (id, email, role, status, diplomaNumber,
+ * graduationYear) are not editable and rejected with 400.
+ */
+export interface UpdateProfileDto {
+  fullName?: string;
+  headline?: string;
+  bio?: string;
+  city?: string;
+  industry?: string;
+  skills?: string[];
+}
+
 export interface TravelContext {
   city: string;
   dates?: string;

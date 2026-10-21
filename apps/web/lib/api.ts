@@ -9,6 +9,7 @@ import type {
   Profile,
   RegisterDto,
   RegisterResponse,
+  UpdateProfileDto,
   VerificationDecisionResponse,
   VerificationsResponse,
 } from '@opm/shared-types';
@@ -68,6 +69,15 @@ export function registerAlumnus(body: RegisterDto): Promise<RegisterResponse> {
 
 export function fetchProfiles(signal?: AbortSignal): Promise<Profile[]> {
   return request<Profile[]>('/profiles', undefined, signal);
+}
+
+/** Updates the authenticated user's own profile; the API re-embeds it when searchable text changes. */
+export function updateMyProfile(body: UpdateProfileDto): Promise<Profile> {
+  return request<Profile>('/profiles/me', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
 }
 
 export function fetchMatches(

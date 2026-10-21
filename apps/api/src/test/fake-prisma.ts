@@ -137,6 +137,25 @@ export function createFakePrisma(profiles: StoredProfile[]) {
       hits.forEach((p) => Object.assign(p, data));
       return { count: hits.length };
     },
+    update: async ({
+      where,
+      data,
+      select,
+    }: {
+      where: { id: string };
+      data: Partial<StoredProfile>;
+      select?: Record<string, boolean>;
+    }) => {
+      const hit = profiles.find((p) => p.id === where.id);
+      if (!hit) {
+        throw new Prisma.PrismaClientKnownRequestError('Record to update not found', {
+          code: 'P2025',
+          clientVersion: 'test',
+        });
+      }
+      Object.assign(hit, data);
+      return applySelect(hit as unknown as Row, select);
+    },
     create: async ({
       data,
       select,
@@ -165,15 +184,22 @@ export function createFakePrisma(profiles: StoredProfile[]) {
 
   const db = { introRequest, profile, intros, embeddings, $executeRaw };
   const $transaction = async <T>(fn: (tx: typeof db) => Promise<T>) => {
-    const snapshot = profiles.length;
+    const snapshot = profiles.map((p) => ({ ...p }));
+    const embeddingsBefore = new Map(embeddings);
     try {
-      return await fn(db);
+      return await fn(api);
     } catch (err) {
-      profiles.length = snapshot; // roll back
+      // roll back inserts, updates and embedding writes
+      profiles.length = snapshot.length;
+      snapshot.forEach((before, i) => Object.assign(profiles[i], before));
+      embeddings.clear();
+      embeddingsBefore.forEach((v, k) => embeddings.set(k, v));
       throw err;
     }
   };
-  return { ...db, $transaction };
+  // Transactions run against the returned object so tests can spy on any of its methods.
+  const api = { ...db, $transaction };
+  return api;
 }
 
 export type FakePrisma = ReturnType<typeof createFakePrisma>;

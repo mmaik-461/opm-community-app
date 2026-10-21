@@ -52,3 +52,6 @@ export const APPLICANT = {
   graduationYear: '2017',
   diplomaNumber: 'D-2017-0314',
 };
+
+/** Edits their own profile in the profile-editing journey; no other journey acts as them. */
+export const PROFILE_EDITOR = 'Rachel Goldberg';

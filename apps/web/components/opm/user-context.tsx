@@ -20,6 +20,8 @@ interface UserContextValue {
   loading: boolean;
   error: string | null;
   reload: () => void;
+  /** Swaps a freshly saved profile into the directory so every view shows it immediately. */
+  replaceProfile: (profile: Profile) => void;
 }
 
 const UserContext = React.createContext<UserContextValue | null>(null);
@@ -68,6 +70,11 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
   const handleSignOut = React.useCallback(() => void signOut({ redirect: false }), []);
   const reload = React.useCallback(() => setAttempt((a) => a + 1), []);
+  const replaceProfile = React.useCallback(
+    (updated: Profile) =>
+      setProfiles((list) => list.map((p) => (p.id === updated.id ? updated : p))),
+    [],
+  );
 
   const value = React.useMemo<UserContextValue>(
     () => ({
@@ -80,6 +87,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       loading: status === 'loading' || loadingProfiles,
       error,
       reload,
+      replaceProfile,
     }),
     [
       authenticated,
@@ -92,6 +100,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       loadingProfiles,
       error,
       reload,
+      replaceProfile,
     ],
   );
 

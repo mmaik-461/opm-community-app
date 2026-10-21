@@ -16,6 +16,7 @@ import { TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Role } from '@opm/shared-types';
 import { ADMIN_TAB, ADMIN_TAB_LABEL } from '@/constants/admin';
 import { CountBadge } from './count-badge';
+import { EditProfile } from './edit-profile';
 import { useIntros } from './intros-context';
 import { initials } from '@/utils/profile';
 import { useUser } from './user-context';
@@ -114,6 +115,7 @@ export function Header() {
               </DropdownMenuContent>
             </DropdownMenu>
           )}
+          {currentUser && <EditProfile profile={currentUser} />}
           <Button
             variant="ghost"
             size="icon"

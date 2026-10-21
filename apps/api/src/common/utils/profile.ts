@@ -1,5 +1,6 @@
-import { ProfileStatus } from '@opm/shared-types';
+import { ProfileStatus, type UpdateProfileDto } from '@opm/shared-types';
 import {
+  EMBEDDED_PROFILE_FIELDS,
   MIN_BIO_LENGTH_FOR_EMBEDDING,
   PENDING_VERIFICATION_MESSAGE,
   REJECTED_MESSAGE,
@@ -38,4 +39,15 @@ export function inactiveStatusMessage(status: ProfileStatus): string | null {
   if (status === ProfileStatus.PENDING_VERIFICATION) return PENDING_VERIFICATION_MESSAGE;
   if (status === ProfileStatus.REJECTED) return REJECTED_MESSAGE;
   return null;
+}
+
+/** True when the patch actually changes a field the embedding is built from. */
+export function changesEmbeddedText(
+  current: Pick<EmbeddingSource, (typeof EMBEDDED_PROFILE_FIELDS)[number]>,
+  patch: UpdateProfileDto,
+): boolean {
+  return EMBEDDED_PROFILE_FIELDS.some((field) => {
+    const next = patch[field];
+    return next !== undefined && JSON.stringify(next) !== JSON.stringify(current[field]);
+  });
 }
