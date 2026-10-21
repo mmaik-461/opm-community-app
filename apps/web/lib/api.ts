@@ -1,5 +1,8 @@
 import type {
   CreateIntroDto,
+  CreateMatchFeedbackDto,
+  FeedbackAnalyticsResponse,
+  MatchFeedbackResponse,
   DecideVerificationDto,
   IntroRequestResponse,
   IntrosResponse,
@@ -143,4 +146,16 @@ export function decideVerification(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
+}
+
+export function submitMatchFeedback(body: CreateMatchFeedbackDto): Promise<MatchFeedbackResponse> {
+  return request<MatchFeedbackResponse>('/matchmaker/feedback', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
+export function fetchFeedback(signal?: AbortSignal): Promise<FeedbackAnalyticsResponse> {
+  return request<FeedbackAnalyticsResponse>('/admin/feedback', undefined, signal);
 }

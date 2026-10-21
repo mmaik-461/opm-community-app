@@ -6,6 +6,7 @@ import { ProfilesModule } from './profiles/profiles.module';
 import { MatchmakingModule } from './matchmaking/matchmaking.module';
 import { IntrosModule } from './intros/intros.module';
 import { AdminModule } from './admin/admin.module';
+import { FeedbackModule } from './feedback/feedback.module';
 import { AuthModule } from './auth/auth.module';
 
 @Module({
@@ -18,6 +19,7 @@ import { AuthModule } from './auth/auth.module';
     MatchmakingModule,
     IntrosModule,
     AdminModule,
+    FeedbackModule,
   ],
 })
 export class AppModule {}

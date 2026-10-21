@@ -31,33 +31,47 @@ enum IntroStatus {
   DECLINED
 }
 
+enum FeedbackRating {
+  POSITIVE
+  NEGATIVE
+}
+
+enum FeedbackReason {
+  GREAT_MATCH
+  DIFFERENT_INDUSTRY
+  SKILL_MISMATCH
+  OTHER
+}
+
 model Profile {
-  id             String                       @id @default(uuid())
-  fullName       String
-  headline       String
-  bio            String
-  city           String
-  travelStatus   TravelStatus                 @default(LIVING_IN)
-  cohort         String
-  graduationYear Int
-  industry       String
-  skills         String[]
-  avatarUrl      String?
-  linkedinUrl    String?
-  email          String?                      @unique
+  id               String                       @id @default(uuid())
+  fullName         String
+  headline         String
+  bio              String
+  city             String
+  travelStatus     TravelStatus                 @default(LIVING_IN)
+  cohort           String
+  graduationYear   Int
+  industry         String
+  skills           String[]
+  avatarUrl        String?
+  linkedinUrl      String?
+  email            String?                      @unique
   /// New registrations start as PENDING_VERIFICATION until an admin verifies the alumnus.
-  status         ProfileStatus                @default(PENDING_VERIFICATION)
+  status           ProfileStatus                @default(PENDING_VERIFICATION)
   /// Authorization level; admins review pending registrations.
-  role           Role                         @default(MEMBER)
+  role             Role                         @default(MEMBER)
   /// Verification identifier supplied at registration; never returned by the public API.
-  diplomaNumber  String?
+  diplomaNumber    String?
   /// scrypt hash (`scrypt$salt$key`); null disables password sign-in for the profile.
-  passwordHash   String?
-  embedding      Unsupported("vector(1536)")?
-  createdAt      DateTime                     @default(now())
-  updatedAt      DateTime                     @updatedAt
-  sentIntros     IntroRequest[]               @relation("SentIntros")
-  receivedIntros IntroRequest[]               @relation("ReceivedIntros")
+  passwordHash     String?
+  embedding        Unsupported("vector(1536)")?
+  createdAt        DateTime                     @default(now())
+  updatedAt        DateTime                     @updatedAt
+  sentIntros       IntroRequest[]               @relation("SentIntros")
+  receivedIntros   IntroRequest[]               @relation("ReceivedIntros")
+  givenFeedback    MatchFeedback[]              @relation("GivenFeedback")
+  receivedFeedback MatchFeedback[]              @relation("ReceivedFeedback")
 
   @@index([city])
 }
@@ -76,4 +90,22 @@ model IntroRequest {
 
   @@index([requesterId])
   @@index([targetId, status])
+}
+
+/// A reviewer's verdict on a candidate suggested by the matchmaker for a given query.
+model MatchFeedback {
+  id          String          @id @default(cuid())
+  userId      String
+  user        Profile         @relation("GivenFeedback", fields: [userId], references: [id], onDelete: Cascade)
+  candidateId String
+  candidate   Profile         @relation("ReceivedFeedback", fields: [candidateId], references: [id], onDelete: Cascade)
+  query       String
+  rating      FeedbackRating
+  reason      FeedbackReason?
+  comment     String?
+  createdAt   DateTime        @default(now())
+
+  @@index([createdAt])
+  @@index([userId])
+  @@index([candidateId])
 }

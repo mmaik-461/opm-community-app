@@ -11,6 +11,7 @@ import {
   verifyAccessToken,
 } from './auth';
 import { requireEnvKey } from './env';
+import { reasonFitsRating, satisfactionRate } from './feedback';
 import { hashPassword, verifyPassword } from './password';
 import { buildPaginationMeta, pageOffset } from './pagination';
 import { equalsInsensitive } from './prisma';
@@ -236,5 +237,24 @@ describe('inactiveStatusMessage', () => {
     expect(inactiveStatusMessage('PENDING_VERIFICATION')).toBe(PENDING_VERIFICATION_MESSAGE);
     expect(inactiveStatusMessage('REJECTED')).toBe(REJECTED_MESSAGE);
     expect(inactiveStatusMessage('ACTIVE')).toBeNull();
+  });
+});
+
+describe('feedback helpers', () => {
+  it('satisfactionRate is the rounded share of positives, 0 without reviews', () => {
+    expect(satisfactionRate(0, 0)).toBe(0);
+    expect(satisfactionRate(1, 3)).toBe(33);
+    expect(satisfactionRate(2, 3)).toBe(67);
+    expect(satisfactionRate(5, 5)).toBe(100);
+  });
+
+  it('reasonFitsRating keeps GREAT_MATCH positive and the mismatch reasons negative', () => {
+    expect(reasonFitsRating('POSITIVE', undefined)).toBe(true);
+    expect(reasonFitsRating('POSITIVE', 'GREAT_MATCH')).toBe(true);
+    expect(reasonFitsRating('NEGATIVE', 'GREAT_MATCH')).toBe(false);
+    expect(reasonFitsRating('NEGATIVE', 'SKILL_MISMATCH')).toBe(true);
+    expect(reasonFitsRating('POSITIVE', 'DIFFERENT_INDUSTRY')).toBe(false);
+    expect(reasonFitsRating('POSITIVE', 'OTHER')).toBe(true);
+    expect(reasonFitsRating('NEGATIVE', 'OTHER')).toBe(true);
   });
 });

@@ -212,6 +212,76 @@ export interface VerificationDecisionResponse {
   status: Extract<ProfileStatus, 'ACTIVE' | 'REJECTED'>;
 }
 
+export type FeedbackRating = 'POSITIVE' | 'NEGATIVE';
+
+export const FeedbackRating = {
+  POSITIVE: 'POSITIVE',
+  NEGATIVE: 'NEGATIVE',
+} as const satisfies Record<FeedbackRating, FeedbackRating>;
+
+export type FeedbackReason = 'GREAT_MATCH' | 'DIFFERENT_INDUSTRY' | 'SKILL_MISMATCH' | 'OTHER';
+
+export const FeedbackReason = {
+  GREAT_MATCH: 'GREAT_MATCH',
+  DIFFERENT_INDUSTRY: 'DIFFERENT_INDUSTRY',
+  SKILL_MISMATCH: 'SKILL_MISMATCH',
+  OTHER: 'OTHER',
+} as const satisfies Record<FeedbackReason, FeedbackReason>;
+
+/** Length limits for matchmaker feedback, enforced by the API and mirrored by the web dialog. */
+export const FEEDBACK_LIMITS = {
+  query: 1000,
+  comment: 500,
+} as const;
+
+/** The reviewer is the authenticated user; it is never part of the payload. */
+export interface CreateMatchFeedbackDto {
+  candidateId: string;
+  /** The search text the suggestion was made for. */
+  query: string;
+  rating: FeedbackRating;
+  reason?: FeedbackReason;
+  comment?: string;
+}
+
+export interface MatchFeedbackResponse {
+  id: string;
+  candidateId: string;
+  rating: FeedbackRating;
+  createdAt: string;
+}
+
+export interface FeedbackPerson {
+  id: string;
+  fullName: string;
+  email: string | null;
+}
+
+export interface FeedbackEntry {
+  id: string;
+  query: string;
+  rating: FeedbackRating;
+  reason: FeedbackReason | null;
+  comment: string | null;
+  createdAt: string;
+  user: FeedbackPerson;
+  candidate: FeedbackPerson;
+}
+
+export interface FeedbackSummary {
+  total: number;
+  positive: number;
+  negative: number;
+  /** Share of positive reviews, 0-100 rounded to a whole percent; 0 when there are no reviews. */
+  satisfactionRate: number;
+}
+
+/** `data` is newest first; `summary` covers every review, not only the listed ones. */
+export interface FeedbackAnalyticsResponse {
+  summary: FeedbackSummary;
+  data: FeedbackEntry[];
+}
+
 export const PASSWORD_MIN_LENGTH = 8;
 
 export type PasswordRuleId = 'length' | 'uppercase' | 'lowercase' | 'number' | 'special';

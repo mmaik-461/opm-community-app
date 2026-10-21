@@ -147,4 +147,99 @@ describe('MatchCard', () => {
       expect(open).toHaveTextContent('Request Intro');
     });
   });
+
+  describe('feedback', () => {
+    const rate = (name: RegExp) => screen.getByRole('button', { name });
+
+    it('sends a thumbs up for the candidate and query, then confirms', async () => {
+      const user = userEvent.setup();
+      const api = setup(makeMatch(), { 'POST /matchmaker/feedback': { id: 'fb-1' } });
+      await user.click(rate(/^relevant$/i));
+
+      expect(await screen.findByRole('status')).toHaveTextContent('Thanks for your feedback');
+      expect(screen.queryByRole('button', { name: /relevant/i })).not.toBeInTheDocument();
+      const post = api.calls.find((c) => c.path === '/matchmaker/feedback');
+      expect(post?.headers.get('Authorization')).toBe(`Bearer ${testAccessToken('me')}`);
+      // The reviewer is the token owner, never part of the payload.
+      expect(post?.body).toEqual({
+        candidateId: 'p1',
+        query: 'Series A',
+        rating: 'POSITIVE',
+        reason: 'GREAT_MATCH',
+      });
+    });
+
+    it('asks for a reason on a thumbs down and sends reason and comment', async () => {
+      const user = userEvent.setup();
+      const api = setup(makeMatch(), { 'POST /matchmaker/feedback': { id: 'fb-2' } });
+      await user.click(rate(/not relevant/i));
+
+      const dialog = await screen.findByRole('dialog', { name: /what was off/i });
+      expect(api.calls.some((c) => c.path === '/matchmaker/feedback')).toBe(false);
+      expect(within(dialog).queryByLabelText('Great match')).not.toBeInTheDocument();
+      await user.click(within(dialog).getByLabelText('Skill mismatch'));
+      await user.type(within(dialog).getByLabelText(/comment/i), '  No fundraising background ');
+      await user.click(within(dialog).getByRole('button', { name: /submit feedback/i }));
+
+      expect(await screen.findByRole('status')).toHaveTextContent('Thanks for your feedback');
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(api.calls.find((c) => c.path === '/matchmaker/feedback')?.body).toEqual({
+        candidateId: 'p1',
+        query: 'Series A',
+        rating: 'NEGATIVE',
+        reason: 'SKILL_MISMATCH',
+        comment: 'No fundraising background',
+      });
+    });
+
+    it('allows a thumbs down without a reason or comment', async () => {
+      const user = userEvent.setup();
+      const api = setup(makeMatch(), { 'POST /matchmaker/feedback': { id: 'fb-3' } });
+      await user.click(rate(/not relevant/i));
+      await user.click(
+        within(await screen.findByRole('dialog')).getByRole('button', { name: /submit feedback/i }),
+      );
+      await screen.findByRole('status');
+      expect(api.calls.find((c) => c.path === '/matchmaker/feedback')?.body).toEqual({
+        candidateId: 'p1',
+        query: 'Series A',
+        rating: 'NEGATIVE',
+      });
+    });
+
+    it('cancelling the dialog sends nothing and keeps the buttons', async () => {
+      const user = userEvent.setup();
+      const api = setup();
+      await user.click(rate(/not relevant/i));
+      await user.click(
+        within(await screen.findByRole('dialog')).getByRole('button', { name: /cancel/i }),
+      );
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      expect(api.calls.some((c) => c.path === '/matchmaker/feedback')).toBe(false);
+      expect(rate(/^relevant$/i)).toBeEnabled();
+    });
+
+    it('shows the server error in the dialog and stays retryable', async () => {
+      const user = userEvent.setup();
+      setup(makeMatch(), {
+        'POST /matchmaker/feedback': () =>
+          jsonError(403, 'Your account is awaiting alumni verification.'),
+      });
+      await user.click(rate(/not relevant/i));
+      const dialog = await screen.findByRole('dialog');
+      await user.click(within(dialog).getByRole('button', { name: /submit feedback/i }));
+      expect(await within(dialog).findByRole('alert')).toHaveTextContent(/awaiting alumni/i);
+      expect(within(dialog).getByRole('button', { name: /submit feedback/i })).toBeEnabled();
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    });
+
+    it('shows a thumbs up failure next to the buttons without confirming', async () => {
+      const user = userEvent.setup();
+      setup(makeMatch(), { 'POST /matchmaker/feedback': () => jsonError(500, 'Database down') });
+      await user.click(rate(/^relevant$/i));
+      expect(await screen.findByRole('alert')).toHaveTextContent('Database down');
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+      expect(rate(/^relevant$/i)).toBeEnabled();
+    });
+  });
 });

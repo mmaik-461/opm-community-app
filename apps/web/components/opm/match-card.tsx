@@ -22,6 +22,7 @@ import { LABEL_CLASS, PRIMARY_BUTTON_CLASS } from '@/constants/ui';
 import { toPercent } from '@/utils/format';
 import { initials, travelLabel } from '@/utils/profile';
 import { buildMailto, safeHttpUrl } from '@/utils/url';
+import { MatchFeedback } from './match-feedback';
 import { RequestIntroDialog } from './request-intro-dialog';
 import { useUser } from './user-context';
 
@@ -166,6 +167,9 @@ export function MatchCard({
             </a>
           </Button>
         )}
+      </div>
+      <div className="border-t border-zinc-100 pt-4">
+        <MatchFeedback candidate={profile} query={query} />
       </div>
       <RequestIntroDialog
         open={dialogOpen}

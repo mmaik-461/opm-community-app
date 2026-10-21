@@ -15,6 +15,17 @@ interface StoredIntro {
   updatedAt: Date;
 }
 
+export interface StoredFeedback {
+  id: string;
+  userId: string;
+  candidateId: string;
+  query: string;
+  rating: 'POSITIVE' | 'NEGATIVE';
+  reason: string | null;
+  comment: string | null;
+  createdAt: Date;
+}
+
 function matches(row: Row, where: Where = {}): boolean {
   return Object.entries(where).every(([key, cond]) => {
     if (cond === undefined) return true; // Prisma ignores undefined filters
@@ -51,6 +62,7 @@ function applySelect<T extends Row>(row: T, select?: Record<string, boolean>): R
 
 export function createFakePrisma(profiles: StoredProfile[]) {
   const intros: StoredIntro[] = [];
+  const feedback: StoredFeedback[] = [];
   /** Profile id -> vector literal written by the raw `embedding` UPDATE. */
   const embeddings = new Map<string, string>();
   let clock = Date.UTC(2026, 0, 1);
@@ -102,6 +114,53 @@ export function createFakePrisma(profiles: StoredProfile[]) {
       hits.forEach((i) => Object.assign(i, data, { updatedAt: new Date((clock += 1000)) }));
       return { count: hits.length };
     },
+  };
+
+  const selectProfile = (id: string, select: Record<string, boolean>) =>
+    applySelect(profiles.find((p) => p.id === id)! as unknown as Row, select);
+
+  const matchFeedback = {
+    create: async ({
+      data,
+    }: {
+      data: Pick<StoredFeedback, 'userId' | 'candidateId' | 'query' | 'rating'> &
+        Partial<Pick<StoredFeedback, 'reason' | 'comment' | 'createdAt'>>;
+    }) => {
+      // Prisma stores a missing optional as NULL.
+      const row: StoredFeedback = {
+        userId: data.userId,
+        candidateId: data.candidateId,
+        query: data.query,
+        rating: data.rating,
+        reason: data.reason ?? null,
+        comment: data.comment ?? null,
+        id: `fb-${++seq}`,
+        createdAt: data.createdAt ?? new Date((clock += 1000)),
+      };
+      feedback.push(row);
+      return row;
+    },
+    count: async ({ where }: { where?: Where } = {}) =>
+      feedback.filter((f) => matches(f as unknown as Row, where)).length,
+    findMany: async ({
+      where,
+      include,
+      take,
+    }: {
+      where?: Where;
+      include?: Record<'user' | 'candidate', { select: Record<string, boolean> }>;
+      take?: number;
+    } = {}) =>
+      feedback
+        .filter((f) => matches(f as unknown as Row, where))
+        // orderBy: createdAt desc, id desc
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime() || (a.id < b.id ? 1 : -1))
+        .slice(0, take)
+        .map((f) => ({
+          ...f,
+          user: include && selectProfile(f.userId, include.user.select),
+          candidate: include && selectProfile(f.candidateId, include.candidate.select),
+        })),
   };
 
   const profile = {
@@ -182,7 +241,7 @@ export function createFakePrisma(profiles: StoredProfile[]) {
     return 1;
   };
 
-  const db = { introRequest, profile, intros, embeddings, $executeRaw };
+  const db = { introRequest, matchFeedback, profile, intros, feedback, embeddings, $executeRaw };
   const $transaction = async <T>(fn: (tx: typeof db) => Promise<T>) => {
     const snapshot = profiles.map((p) => ({ ...p }));
     const embeddingsBefore = new Map(embeddings);

@@ -3,6 +3,7 @@ export const ROUTES = {
   directory: '/directory',
   intros: '/intros',
   admin: '/admin',
+  adminFeedback: '/admin/feedback',
   login: '/login',
   register: '/register',
 } as const;
@@ -26,3 +27,9 @@ export const NAV_ITEMS: readonly NavItem[] = [
 
 /** Only offered to admins; the API enforces the role regardless. */
 export const ADMIN_NAV_ITEM: NavItem = { href: ROUTES.admin, label: 'Verifications' };
+
+/** Sections of the admin area, shown as links above its pages. */
+export const ADMIN_TABS: readonly NavItem[] = [
+  ADMIN_NAV_ITEM,
+  { href: ROUTES.adminFeedback, label: 'Feedback Analytics' },
+];

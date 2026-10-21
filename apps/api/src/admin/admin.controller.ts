@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, Patch } from '@nestjs/common';
 import {
   Role,
   type DecideVerificationDto,
+  type FeedbackAnalyticsResponse,
   type VerificationDecisionResponse,
   type VerificationsResponse,
 } from '@opm/shared-types';
@@ -18,6 +19,11 @@ export class AdminController {
   @Get('verifications')
   listVerifications(): Promise<VerificationsResponse> {
     return this.admin.listPending();
+  }
+
+  @Get('feedback')
+  listFeedback(): Promise<FeedbackAnalyticsResponse> {
+    return this.admin.listFeedback();
   }
 
   @Patch('verifications/:id')

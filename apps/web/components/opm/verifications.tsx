@@ -1,9 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
-import { AlertTriangle, Check, CheckCircle2, Inbox, ShieldX, X } from 'lucide-react';
-import { Role, VerificationDecision } from '@opm/shared-types';
+import { AlertTriangle, Check, CheckCircle2, Inbox, X } from 'lucide-react';
+import { VerificationDecision } from '@opm/shared-types';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,9 +15,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
-  FORBIDDEN_BACK_LABEL,
-  FORBIDDEN_MESSAGE,
-  FORBIDDEN_TITLE,
   NO_DIPLOMA_LABEL,
   VERIFICATION_COLUMNS,
   VERIFICATION_NOTICE,
@@ -29,33 +25,20 @@ import {
 } from '@/constants/admin';
 import { LABEL_CLASS } from '@/constants/ui';
 import { formatDate } from '@/utils/format';
-import { useUser } from './user-context';
+import { AdminGate } from './admin-gate';
 import { useVerifications } from './verifications-context';
 
-function Forbidden() {
+export function Verifications() {
   return (
-    <Card
-      role="alert"
-      className="items-center gap-3 border border-zinc-200 bg-white p-10 text-center shadow-none ring-0"
-    >
-      <ShieldX className="size-8 text-zinc-400" aria-hidden />
-      <h2 className="text-lg font-semibold tracking-tight">{FORBIDDEN_TITLE}</h2>
-      <p className="text-sm text-zinc-600">{FORBIDDEN_MESSAGE}</p>
-      <Button asChild variant="outline" size="sm">
-        <Link href="/">{FORBIDDEN_BACK_LABEL}</Link>
-      </Button>
-    </Card>
+    <AdminGate>
+      <VerificationsPanel />
+    </AdminGate>
   );
 }
 
-export function Verifications() {
-  const { currentUser, loading: userLoading } = useUser();
+function VerificationsPanel() {
   const { pending, loading, error, actionError, deciding, decide, refresh } = useVerifications();
   const [notice, setNotice] = React.useState<string | null>(null);
-
-  // The role is only known once the profile has loaded; never flash "denied" before that.
-  if (userLoading || !currentUser) return <Skeleton className="h-48 w-full" />;
-  if (currentUser.role !== Role.ADMIN) return <Forbidden />;
 
   async function handleDecision(id: string, name: string, decision: VerificationDecision) {
     setNotice(null);

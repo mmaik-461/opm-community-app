@@ -26,3 +26,5 @@ export const FORBIDDEN_TITLE = 'Access denied';
 export const FORBIDDEN_MESSAGE =
   'The verification panel is only available to community administrators.';
 export const FORBIDDEN_BACK_LABEL = 'Back to the community';
+
+export const ADMIN_TABS_LABEL = 'Admin sections';

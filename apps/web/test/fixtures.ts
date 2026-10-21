@@ -1,4 +1,6 @@
 import type {
+  FeedbackAnalyticsResponse,
+  FeedbackEntry,
   IntroRequestResponse,
   IntrosResponse,
   MatchResult,
@@ -72,5 +74,37 @@ export function makeVerification(
     diplomaNumber: 'DIP-42',
     createdAt: '2026-03-02T10:00:00.000Z',
     ...overrides,
+  };
+}
+
+export function makeFeedback(overrides: Partial<FeedbackEntry> = {}): FeedbackEntry {
+  return {
+    id: 'fb-1',
+    query: 'Series A',
+    rating: 'POSITIVE',
+    reason: 'GREAT_MATCH',
+    comment: null,
+    createdAt: '2026-03-05T10:00:00.000Z',
+    user: { id: 'me', fullName: 'Me Myself', email: 'me@example.com' },
+    candidate: { id: 'p1', fullName: 'Anna Kowalska', email: 'anna@example.com' },
+    ...overrides,
+  };
+}
+
+export function makeFeedbackAnalytics(
+  data: FeedbackEntry[],
+  summary: Partial<FeedbackAnalyticsResponse['summary']> = {},
+): FeedbackAnalyticsResponse {
+  const positive = data.filter((f) => f.rating === 'POSITIVE').length;
+  const negative = data.length - positive;
+  return {
+    summary: {
+      total: data.length,
+      positive,
+      negative,
+      satisfactionRate: data.length ? Math.round((positive / data.length) * 100) : 0,
+      ...summary,
+    },
+    data,
   };
 }

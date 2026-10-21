@@ -1,7 +1,8 @@
 import { expect, type Page } from '@playwright/test';
 import { DEFAULT_USER } from '../constants';
 
-export type AppSection = 'AI Matchmaker' | 'Alumni Directory' | 'My Intros' | 'Verifications';
+export type AppSection =
+  'AI Matchmaker' | 'Alumni Directory' | 'My Intros' | 'Verifications' | 'Feedback Analytics';
 
 /** Signs in through the development quick-login list, like a developer switching accounts. */
 export async function quickLogin(page: Page, fullName: string) {
@@ -27,6 +28,7 @@ const SECTION_PATH: Record<AppSection, string> = {
   'Alumni Directory': '/directory',
   'My Intros': '/intros',
   Verifications: '/admin',
+  'Feedback Analytics': '/admin/feedback',
 };
 
 /** Follows the header link to a section, like a person would, and waits for its URL. */
