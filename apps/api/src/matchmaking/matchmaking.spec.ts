@@ -134,6 +134,15 @@ describe('MatchmakingService', () => {
       expect(queryRaw).not.toHaveBeenCalled();
     });
 
+    it('rejects a REJECTED requester with 403 before embedding or ranking', async () => {
+      findUnique.mockResolvedValue({ ...requester, status: 'REJECTED' });
+      const err = await service.match('me', { query: 'fintech mentor' }).catch((e: unknown) => e);
+      expect(err).toBeInstanceOf(ForbiddenException);
+      expect((err as Error).message).toMatch(/not approved/i);
+      expect(sdk.embeddingsCreate).not.toHaveBeenCalled();
+      expect(queryRaw).not.toHaveBeenCalled();
+    });
+
     it('does not leak the verification status into the LLM prompt', async () => {
       findUnique.mockResolvedValue({ ...requester, status: 'ACTIVE' });
       await service.match('me', { query: 'fintech mentor' });

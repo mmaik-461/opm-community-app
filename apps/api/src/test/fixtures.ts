@@ -13,6 +13,7 @@ export function makeProfile(overrides: Partial<Profile> = {}): Profile {
     industry: 'Fintech',
     skills: ['payments'],
     status: 'ACTIVE',
+    role: 'MEMBER',
     avatarUrl: null,
     linkedinUrl: null,
     email: null,

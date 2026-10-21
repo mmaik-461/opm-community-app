@@ -13,6 +13,7 @@ export const PROFILE_SELECT = {
   industry: true,
   skills: true,
   status: true,
+  role: true,
   avatarUrl: true,
   linkedinUrl: true,
   email: true,
@@ -47,3 +48,18 @@ export const MIN_BIO_LENGTH_FOR_EMBEDDING = 40;
 
 export const PENDING_VERIFICATION_MESSAGE =
   'Your account is awaiting alumni verification. Matchmaking and intro requests unlock once you are verified.';
+
+export const REJECTED_MESSAGE =
+  'Your alumni verification was not approved, so matchmaking and intro requests are unavailable.';
+
+export const VERIFICATION_NOT_PENDING_MESSAGE = 'This application has already been reviewed';
+export const VERIFICATION_NOT_FOUND_MESSAGE = 'Verification request not found';
+
+export const VERIFICATION_SELECT = {
+  id: true,
+  fullName: true,
+  email: true,
+  graduationYear: true,
+  diplomaNumber: true,
+  createdAt: true,
+} satisfies Prisma.ProfileSelect;

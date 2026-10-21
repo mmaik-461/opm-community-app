@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { PrismaClient, TravelStatus } from '@prisma/client';
+import { PrismaClient, Role, TravelStatus } from '@prisma/client';
 import { hashPassword } from '../src/common/utils/password';
 
 const prisma = new PrismaClient();
@@ -12,6 +12,9 @@ const COHORT_GRADUATION_YEAR: Record<string, number> = {
   'OPM 52': 2021,
 };
 
+/** Dedicated administrator account: reviews pending registrations in the verification panel. */
+const ADMIN_EMAIL = 'admin@alumni.edu';
+
 interface SeedProfile {
   fullName: string;
   headline: string;
@@ -21,6 +24,8 @@ interface SeedProfile {
   cohort: string;
   industry: string;
   skills: string[];
+  role?: Role;
+  email?: string;
 }
 
 const profiles: SeedProfile[] = [
@@ -250,6 +255,17 @@ const profiles: SeedProfile[] = [
     bio: 'Builds IoT temperature monitoring for pharmaceutical and food cold-chain shipments across Europe. Experienced with GDP compliance, sensor hardware partnerships and selling to global freight operators.',
     skills: ['cold chain', 'IoT', 'GDP compliance', 'hardware partnerships'],
   },
+  {
+    fullName: 'Community Admin',
+    headline: 'Community Administrator, OPM Alumni Network',
+    city: 'London',
+    cohort: 'OPM 48',
+    industry: 'Community',
+    bio: 'Runs the OPM alumni community and verifies new members. Reach out for questions about membership, verification and community events.',
+    skills: ['community management', 'alumni verification'],
+    role: Role.ADMIN,
+    email: ADMIN_EMAIL,
+  },
 ];
 
 function embeddingText(p: SeedProfile): string {
@@ -325,17 +341,17 @@ async function main() {
   );
 
   for (const [i, p] of profiles.entries()) {
-    const email = `${slug(p.fullName)}@opm-alumni.example`;
+    const email = p.email ?? `${slug(p.fullName)}@opm-alumni.example`;
     const linkedinUrl = `https://www.linkedin.com/in/${slug(p.fullName).replace(/\./g, '-')}`;
     const vector = `[${vectors[i].join(',')}]`;
     await prisma.$executeRaw`
-      INSERT INTO "Profile" ("id","fullName","headline","bio","city","travelStatus","cohort","graduationYear","industry","skills","linkedinUrl","email","status","passwordHash","embedding","updatedAt")
+      INSERT INTO "Profile" ("id","fullName","headline","bio","city","travelStatus","cohort","graduationYear","industry","skills","linkedinUrl","email","status","role","passwordHash","embedding","updatedAt")
       VALUES (gen_random_uuid()::text, ${p.fullName}, ${p.headline}, ${p.bio}, ${p.city},
               ${p.travelStatus ?? 'LIVING_IN'}::"TravelStatus", ${p.cohort}, ${COHORT_GRADUATION_YEAR[p.cohort]}, ${p.industry}, ${p.skills},
-              ${linkedinUrl}, ${email}, 'ACTIVE'::"ProfileStatus", ${passwordHash}, ${vector}::vector, now())
+              ${linkedinUrl}, ${email}, 'ACTIVE'::"ProfileStatus", ${p.role ?? Role.MEMBER}::"Role", ${passwordHash}, ${vector}::vector, now())
       ON CONFLICT ("email") DO UPDATE SET
         "fullName"=EXCLUDED."fullName", "headline"=EXCLUDED."headline", "bio"=EXCLUDED."bio", "city"=EXCLUDED."city",
-        "travelStatus"=EXCLUDED."travelStatus", "cohort"=EXCLUDED."cohort", "graduationYear"=EXCLUDED."graduationYear", "status"=EXCLUDED."status", "industry"=EXCLUDED."industry",
+        "travelStatus"=EXCLUDED."travelStatus", "cohort"=EXCLUDED."cohort", "graduationYear"=EXCLUDED."graduationYear", "status"=EXCLUDED."status", "role"=EXCLUDED."role", "industry"=EXCLUDED."industry",
         "skills"=EXCLUDED."skills", "linkedinUrl"=EXCLUDED."linkedinUrl",
         "passwordHash"=COALESCE(EXCLUDED."passwordHash", "Profile"."passwordHash"), "embedding"=EXCLUDED."embedding", "updatedAt"=now()`;
   }

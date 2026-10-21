@@ -1,7 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 import { DEFAULT_USER } from '../constants';
 
-export type AppTab = 'AI Matchmaker' | 'Alumni Directory' | 'My Intros';
+export type AppTab = 'AI Matchmaker' | 'Alumni Directory' | 'My Intros' | 'Verifications';
 
 /** Signs in through the development quick-login list, like a developer switching accounts. */
 export async function quickLogin(page: Page, fullName: string) {

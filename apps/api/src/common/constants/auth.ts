@@ -23,3 +23,6 @@ export const INVALID_CREDENTIALS_MESSAGE = 'Invalid email or password';
 export const EMAIL_TAKEN_MESSAGE = 'An account with this email already exists';
 export const MISSING_TOKEN_MESSAGE = 'Authentication required';
 export const INVALID_TOKEN_MESSAGE = 'Invalid or expired access token';
+
+export const ROLES_KEY = 'roles';
+export const FORBIDDEN_ROLE_MESSAGE = 'You do not have permission to perform this action';

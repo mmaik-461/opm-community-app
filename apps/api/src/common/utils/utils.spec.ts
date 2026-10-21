@@ -14,7 +14,13 @@ import { requireEnvKey } from './env';
 import { hashPassword, verifyPassword } from './password';
 import { buildPaginationMeta, pageOffset } from './pagination';
 import { equalsInsensitive } from './prisma';
-import { buildProfileEmbeddingText, cohortLabel, defaultHeadline } from './profile';
+import {
+  buildProfileEmbeddingText,
+  cohortLabel,
+  defaultHeadline,
+  inactiveStatusMessage,
+} from './profile';
+import { PENDING_VERIFICATION_MESSAGE, REJECTED_MESSAGE } from '../constants/profiles';
 import { dataTag, travelContextTag } from './prompt';
 import { toSimilarityScore, toVectorLiteral } from './vector';
 
@@ -222,5 +228,13 @@ describe('profile text helpers', () => {
     expect(buildProfileEmbeddingText({ ...base, bio: 'Hi.' })).toContain(
       'working in Fintech in Prague. Hi.',
     );
+  });
+});
+
+describe('inactiveStatusMessage', () => {
+  it('explains why unverified and rejected profiles are blocked, and lets active ones through', () => {
+    expect(inactiveStatusMessage('PENDING_VERIFICATION')).toBe(PENDING_VERIFICATION_MESSAGE);
+    expect(inactiveStatusMessage('REJECTED')).toBe(REJECTED_MESSAGE);
+    expect(inactiveStatusMessage('ACTIVE')).toBeNull();
   });
 });

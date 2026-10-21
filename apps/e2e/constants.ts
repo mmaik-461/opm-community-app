@@ -38,3 +38,17 @@ export const REGISTRANT = {
   graduationYear: '2019',
   diplomaNumber: 'D-2019-0042',
 };
+
+/** Seeded administrator (`prisma/seed.ts`); reviews registrations in the verification panel. */
+export const ADMIN_USER = 'Community Admin';
+
+/** Distinct from `REGISTRANT`, which stays pending for the registration journey. */
+export const APPLICANT = {
+  fullName: 'Nadia Applicant',
+  email: 'nadia.applicant@example.com',
+  password: 'e2e-applicant-password',
+  city: 'Vienna',
+  industry: 'HealthTech',
+  graduationYear: '2017',
+  diplomaNumber: 'D-2017-0314',
+};

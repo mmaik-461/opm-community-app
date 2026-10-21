@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import type { Profile, ProfileFilters } from '@opm/shared-types';
+import { ProfileStatus, type Profile, type ProfileFilters } from '@opm/shared-types';
 import { PROFILE_SELECT } from '../common/constants/profiles';
 import { equalsInsensitive } from '../common/utils/prisma';
 import { PrismaService } from '../prisma/prisma.service';
@@ -11,6 +11,7 @@ export class ProfilesService {
   findAll(filters: ProfileFilters): Promise<Profile[]> {
     return this.prisma.profile.findMany({
       where: {
+        status: { not: ProfileStatus.REJECTED },
         city: equalsInsensitive(filters.city),
         cohort: equalsInsensitive(filters.cohort),
         industry: equalsInsensitive(filters.industry),

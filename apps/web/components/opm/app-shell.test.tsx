@@ -1,8 +1,8 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { jsonError, stubApi } from '@/test/api-fake';
-import { emptyIntros, makeProfile } from '@/test/fixtures';
+import { emptyIntros, makeProfile, makeVerification } from '@/test/fixtures';
 import { setMockSession, signIn, signOut, testAccessToken } from '@/test/next-auth';
 import { AppShell } from './app-shell';
 
@@ -115,5 +115,74 @@ describe('development impersonation', () => {
     expect(await screen.findByText('Alice Active')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Switch current user' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
+  });
+});
+
+describe('admin verification tab', () => {
+  const admin = makeProfile({ id: 'admin', fullName: 'Ada Admin', role: 'ADMIN' });
+  const applicants = [
+    makeVerification({ id: 'v1' }),
+    makeVerification({ id: 'v2', fullName: 'Oscar Older', email: 'oscar@example.com' }),
+  ];
+
+  it('shows admins a Verifications tab with the pending count', async () => {
+    stubApi({
+      'GET /profiles': [alice, admin],
+      'GET /intros': emptyIntros(),
+      'GET /admin/verifications': { data: applicants },
+    });
+    setMockSession('admin');
+    render(<AppShell />);
+
+    const tabs = await screen.findAllByRole('tab', { name: /verifications/i });
+    expect(tabs.length).toBeGreaterThan(0);
+    await waitFor(() => expect(tabs[0]).toHaveTextContent('2'));
+    expect(within(tabs[0]).getByLabelText('2 pending')).toBeInTheDocument();
+  });
+
+  it('hides the tab from members and never calls the admin API', async () => {
+    const api = stubApi({
+      'GET /profiles': [alice, admin],
+      'GET /intros': emptyIntros(),
+      'GET /admin/verifications': { data: applicants },
+    });
+    setMockSession('alice');
+    render(<AppShell />);
+
+    await screen.findAllByRole('tab', { name: /alumni directory/i });
+    expect(screen.queryByRole('tab', { name: /verifications/i })).not.toBeInTheDocument();
+    expect(api.calls.map((c) => c.path)).not.toContain('/admin/verifications');
+  });
+
+  it('shows members who open /admin an access-denied page', async () => {
+    stubApi({ 'GET /profiles': [alice, admin], 'GET /intros': emptyIntros() });
+    setMockSession('alice');
+    render(<AppShell initialTab="admin" />);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Access denied');
+  });
+
+  it('opens admins on the verification panel at /admin', async () => {
+    stubApi({
+      'GET /profiles': [alice, admin],
+      'GET /intros': emptyIntros(),
+      'GET /admin/verifications': { data: applicants },
+    });
+    setMockSession('admin');
+    render(<AppShell initialTab="admin" />);
+
+    expect(
+      await screen.findByRole('heading', { name: 'Pending verifications' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Oscar Older')).toBeInTheDocument();
+  });
+
+  it('shows a rejected user the rejection banner', async () => {
+    const rejected = makeProfile({ id: 'rex', fullName: 'Rex Rejected', status: 'REJECTED' });
+    stubApi({ 'GET /profiles': [alice, rejected], 'GET /intros': emptyIntros() });
+    setMockSession('rex');
+    render(<AppShell />);
+
+    expect(await screen.findByRole('status')).toHaveTextContent('not approved');
   });
 });

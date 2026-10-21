@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { IntroStatus, ProfileStatus, type Prisma } from '@prisma/client';
+import { IntroStatus, type Prisma } from '@prisma/client';
 import type {
   CreateIntroDto,
   IntroRequestResponse,
@@ -15,7 +15,8 @@ import type {
 } from '@opm/shared-types';
 import { ListIntrosQuery } from './intros.schemas';
 import { PrismaService } from '../prisma/prisma.service';
-import { PENDING_VERIFICATION_MESSAGE, PROFILE_SELECT } from '../common/constants/profiles';
+import { PROFILE_SELECT } from '../common/constants/profiles';
+import { inactiveStatusMessage } from '../common/utils/profile';
 import { buildPaginationMeta, pageOffset } from '../common/utils/pagination';
 
 const INTRO_INCLUDE = {
@@ -37,9 +38,8 @@ export class IntrosService {
       select: { id: true, status: true },
     });
     if (found.length !== 2) throw new NotFoundException('Requester or target profile not found');
-    if (found.find((p) => p.id === requesterId)?.status === ProfileStatus.PENDING_VERIFICATION) {
-      throw new ForbiddenException(PENDING_VERIFICATION_MESSAGE);
-    }
+    const blocked = inactiveStatusMessage(found.find((p) => p.id === requesterId)!.status);
+    if (blocked) throw new ForbiddenException(blocked);
 
     const duplicate = await this.prisma.introRequest.findFirst({
       where: {

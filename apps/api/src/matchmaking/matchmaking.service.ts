@@ -3,7 +3,6 @@ import { Prisma } from '@prisma/client';
 import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import {
-  ProfileStatus,
   type MatchmakingRequest,
   type MatchmakingResponse,
   type MatchResult,
@@ -20,11 +19,9 @@ import {
   MATCHMAKER_SYSTEM_PROMPT,
   SIMILARITY_PRECISION,
 } from '../common/constants/matchmaking';
-import {
-  PENDING_VERIFICATION_MESSAGE,
-  REQUESTER_CONTEXT_SELECT,
-} from '../common/constants/profiles';
+import { REQUESTER_CONTEXT_SELECT } from '../common/constants/profiles';
 import { requireEnvKey } from '../common/utils/env';
+import { inactiveStatusMessage } from '../common/utils/profile';
 import { dataTag, travelContextTag } from '../common/utils/prompt';
 import { toSimilarityScore, toVectorLiteral } from '../common/utils/vector';
 import { PrismaService } from '../prisma/prisma.service';
@@ -71,9 +68,8 @@ export class MatchmakingService {
       where: { id },
       select: { ...REQUESTER_CONTEXT_SELECT, status: true },
     });
-    if (found?.status === ProfileStatus.PENDING_VERIFICATION) {
-      throw new ForbiddenException(PENDING_VERIFICATION_MESSAGE);
-    }
+    const blocked = found && inactiveStatusMessage(found.status);
+    if (blocked) throw new ForbiddenException(blocked);
     // Verification state is access control, not matchmaking context: keep it out of the LLM prompt.
     if (!found) return null;
     const { status: _status, ...requester } = found;

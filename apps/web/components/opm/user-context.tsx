@@ -35,7 +35,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = React.useState<string | null>(null);
   const [attempt, setAttempt] = React.useState(0);
 
-  // The directory is shared by every acting user, so it loads once per sign-in, not per switch.
+  // Re-read on every acting-user change so verification status and role are never stale.
   React.useEffect(() => {
     if (!authenticated) {
       setProfiles([]);
@@ -56,7 +56,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         setLoadingProfiles(false);
       });
     return () => controller.abort();
-  }, [authenticated, attempt]);
+  }, [authenticated, sessionUserId, attempt]);
 
   const setCurrentUserId = React.useCallback(
     (id: string) => {

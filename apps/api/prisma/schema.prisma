@@ -17,6 +17,12 @@ enum TravelStatus {
 enum ProfileStatus {
   ACTIVE
   PENDING_VERIFICATION
+  REJECTED
+}
+
+enum Role {
+  MEMBER
+  ADMIN
 }
 
 enum IntroStatus {
@@ -41,6 +47,8 @@ model Profile {
   email          String?                      @unique
   /// New registrations start as PENDING_VERIFICATION until an admin verifies the alumnus.
   status         ProfileStatus                @default(PENDING_VERIFICATION)
+  /// Authorization level; admins review pending registrations.
+  role           Role                         @default(MEMBER)
   /// Verification identifier supplied at registration; never returned by the public API.
   diplomaNumber  String?
   /// scrypt hash (`scrypt$salt$key`); null disables password sign-in for the profile.

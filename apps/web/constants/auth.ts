@@ -45,3 +45,7 @@ export const EMPTY_REGISTER_VALUES = {
 export const VERIFICATION_BANNER_TITLE = 'Your account is awaiting alumni verification';
 export const VERIFICATION_BANNER_MESSAGE =
   'You can browse the community now. AI matchmaking and intro requests unlock as soon as an administrator verifies your alumni status.';
+
+export const REJECTED_BANNER_TITLE = 'Your alumni verification was not approved';
+export const REJECTED_BANNER_MESSAGE =
+  'You can still browse the community, but AI matchmaking and intro requests are unavailable. Contact an administrator if you think this is a mistake.';

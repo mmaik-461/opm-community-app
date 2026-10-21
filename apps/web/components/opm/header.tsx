@@ -13,20 +13,25 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Role } from '@opm/shared-types';
+import { ADMIN_TAB, ADMIN_TAB_LABEL } from '@/constants/admin';
+import { CountBadge } from './count-badge';
 import { useIntros } from './intros-context';
 import { initials } from '@/utils/profile';
 import { useUser } from './user-context';
+import { useVerifications } from './verifications-context';
 
 export function Header() {
   const { profiles, currentUser, setCurrentUserId, devLoginEnabled, signOut, loading } = useUser();
   const { pendingIncoming } = useIntros();
-  const introsBadge = pendingIncoming > 0 && (
-    <span
-      className="ml-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold text-white"
-      aria-label={`${pendingIncoming} pending`}
-    >
-      {pendingIncoming}
-    </span>
+  const { pending } = useVerifications();
+  const isAdmin = currentUser?.role === Role.ADMIN;
+  const introsBadge = <CountBadge count={pendingIncoming} />;
+  const adminTab = isAdmin && (
+    <TabsTrigger value={ADMIN_TAB} className="px-4">
+      {ADMIN_TAB_LABEL}
+      <CountBadge count={pending.length} />
+    </TabsTrigger>
   );
 
   return (
@@ -55,6 +60,7 @@ export function Header() {
             My Intros
             {introsBadge}
           </TabsTrigger>
+          {adminTab}
         </TabsList>
 
         <div className="flex items-center gap-2">
@@ -122,13 +128,16 @@ export function Header() {
 
       {/* Tabs on small screens */}
       <div className="border-t border-zinc-200 px-4 py-2 md:hidden">
-        <TabsList className="grid h-9 w-full grid-cols-3 bg-zinc-100">
+        <TabsList
+          className={`grid h-9 w-full bg-zinc-100 ${isAdmin ? 'grid-cols-4' : 'grid-cols-3'}`}
+        >
           <TabsTrigger value="matchmaker">AI Matchmaker</TabsTrigger>
           <TabsTrigger value="directory">Alumni Directory</TabsTrigger>
           <TabsTrigger value="intros">
             My Intros
             {introsBadge}
           </TabsTrigger>
+          {adminTab}
         </TabsList>
       </div>
     </header>

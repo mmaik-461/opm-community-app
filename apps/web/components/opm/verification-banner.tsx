@@ -1,7 +1,14 @@
 import { ShieldAlert } from 'lucide-react';
-import { VERIFICATION_BANNER_MESSAGE, VERIFICATION_BANNER_TITLE } from '@/constants/auth';
+import { ProfileStatus } from '@opm/shared-types';
+import {
+  REJECTED_BANNER_MESSAGE,
+  REJECTED_BANNER_TITLE,
+  VERIFICATION_BANNER_MESSAGE,
+  VERIFICATION_BANNER_TITLE,
+} from '@/constants/auth';
 
-export function VerificationBanner() {
+export function VerificationBanner({ status }: { status: ProfileStatus }) {
+  const rejected = status === ProfileStatus.REJECTED;
   return (
     <div
       role="status"
@@ -9,8 +16,12 @@ export function VerificationBanner() {
     >
       <ShieldAlert className="mt-0.5 size-5 shrink-0 text-amber-600" aria-hidden />
       <div className="text-sm text-amber-900">
-        <p className="font-semibold">{VERIFICATION_BANNER_TITLE}</p>
-        <p className="text-amber-800">{VERIFICATION_BANNER_MESSAGE}</p>
+        <p className="font-semibold">
+          {rejected ? REJECTED_BANNER_TITLE : VERIFICATION_BANNER_TITLE}
+        </p>
+        <p className="text-amber-800">
+          {rejected ? REJECTED_BANNER_MESSAGE : VERIFICATION_BANNER_MESSAGE}
+        </p>
       </div>
     </div>
   );

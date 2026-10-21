@@ -2,6 +2,7 @@
 
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { ProfileStatus } from '@opm/shared-types';
+import { ADMIN_TAB } from '@/constants/admin';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Directory } from './directory';
@@ -12,12 +13,16 @@ import { Matchmaker } from './matchmaker';
 import { SignIn } from './sign-in';
 import { UserProvider, useUser } from './user-context';
 import { VerificationBanner } from './verification-banner';
+import { Verifications } from './verifications';
+import { VerificationsProvider } from './verifications-context';
 
 function Content() {
   const { currentUser, error, reload } = useUser();
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
-      {currentUser?.status === ProfileStatus.PENDING_VERIFICATION && <VerificationBanner />}
+      {currentUser && currentUser.status !== ProfileStatus.ACTIVE && (
+        <VerificationBanner status={currentUser.status} />
+      )}
       {error && (
         <div
           role="alert"
@@ -42,11 +47,14 @@ function Content() {
       <TabsContent value="intros">
         <Intros />
       </TabsContent>
+      <TabsContent value={ADMIN_TAB}>
+        <Verifications />
+      </TabsContent>
     </main>
   );
 }
 
-function Gate() {
+function Gate({ initialTab }: { initialTab: string }) {
   const { authenticated, devLoginEnabled, loading } = useUser();
   if (!authenticated) {
     // While the session is still being read, render nothing rather than flash the sign-in form.
@@ -54,18 +62,21 @@ function Gate() {
   }
   return (
     <IntrosProvider>
-      <Tabs defaultValue="matchmaker" className="gap-0">
-        <Header />
-        <Content />
-      </Tabs>
+      <VerificationsProvider>
+        <Tabs defaultValue={initialTab} className="gap-0">
+          <Header />
+          <Content />
+        </Tabs>
+      </VerificationsProvider>
     </IntrosProvider>
   );
 }
 
-export function AppShell() {
+/** `initialTab` lets the `/admin` route open on the verification panel. */
+export function AppShell({ initialTab = 'matchmaker' }: { initialTab?: string }) {
   return (
     <UserProvider>
-      <Gate />
+      <Gate initialTab={initialTab} />
     </UserProvider>
   );
 }

@@ -17,7 +17,11 @@ interface StoredIntro {
 
 function matches(row: Row, where: Where = {}): boolean {
   return Object.entries(where).every(([key, cond]) => {
+    if (cond === undefined) return true; // Prisma ignores undefined filters
     if (key === 'OR') return (cond as Where[]).some((w) => matches(row, w));
+    if (cond && typeof cond === 'object' && 'not' in cond) {
+      return row[key] !== (cond as { not: unknown }).not;
+    }
     if (cond && typeof cond === 'object' && 'in' in cond) {
       return (cond as { in: unknown[] }).in.includes(row[key]);
     }
@@ -33,6 +37,7 @@ function matches(row: Row, where: Where = {}): boolean {
 export type StoredProfile = Profile & {
   passwordHash?: string | null;
   diplomaNumber?: string | null;
+  createdAt?: Date;
 };
 
 function applySelect<T extends Row>(row: T, select?: Record<string, boolean>): Row {
@@ -107,10 +112,14 @@ export function createFakePrisma(profiles: StoredProfile[]) {
     }: {
       where?: Where;
       select?: Record<string, boolean>;
-      orderBy?: { fullName: 'asc' };
+      orderBy?: { fullName: 'asc' } | { createdAt: 'asc' };
     } = {}) => {
       const hits = profiles.filter((p) => matches(p as unknown as Row, where));
-      if (orderBy) hits.sort((a, b) => a.fullName.localeCompare(b.fullName));
+      if (orderBy && 'fullName' in orderBy) {
+        hits.sort((a, b) => a.fullName.localeCompare(b.fullName));
+      } else if (orderBy) {
+        hits.sort((a, b) => (a.createdAt?.getTime() ?? 0) - (b.createdAt?.getTime() ?? 0));
+      }
       return hits.map((p) => applySelect(p as unknown as Row, select ?? { id: true }));
     },
     findUnique: async ({
@@ -122,6 +131,11 @@ export function createFakePrisma(profiles: StoredProfile[]) {
     }) => {
       const hit = profiles.find((p) => matches(p as unknown as Row, where));
       return hit ? applySelect(hit as unknown as Row, select) : null;
+    },
+    updateMany: async ({ where, data }: { where: Where; data: Partial<StoredProfile> }) => {
+      const hits = profiles.filter((p) => matches(p as unknown as Row, where));
+      hits.forEach((p) => Object.assign(p, data));
+      return { count: hits.length };
     },
     create: async ({
       data,

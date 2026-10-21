@@ -1,4 +1,9 @@
-import { MIN_BIO_LENGTH_FOR_EMBEDDING } from '../constants/profiles';
+import { ProfileStatus } from '@opm/shared-types';
+import {
+  MIN_BIO_LENGTH_FOR_EMBEDDING,
+  PENDING_VERIFICATION_MESSAGE,
+  REJECTED_MESSAGE,
+} from '../constants/profiles';
 
 export function cohortLabel(graduationYear: number): string {
   return `Class of ${graduationYear}`;
@@ -26,4 +31,11 @@ export function buildProfileEmbeddingText(p: EmbeddingSource): string {
       ? p.bio.trim()
       : `${p.fullName} is an OPM alumnus (class of ${p.graduationYear}) working in ${p.industry} in ${p.city}.${p.bio.trim() ? ` ${p.bio.trim()}` : ''}`;
   return `${p.fullName}. ${p.headline}. Industry: ${p.industry}. City: ${p.city}. ${p.cohort}. Skills: ${p.skills.join(', ')}. ${bio}`;
+}
+
+/** Why a profile may not use matchmaking or intros, or null when it is verified. */
+export function inactiveStatusMessage(status: ProfileStatus): string | null {
+  if (status === ProfileStatus.PENDING_VERIFICATION) return PENDING_VERIFICATION_MESSAGE;
+  if (status === ProfileStatus.REJECTED) return REJECTED_MESSAGE;
+  return null;
 }

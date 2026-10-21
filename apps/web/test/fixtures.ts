@@ -1,4 +1,10 @@
-import type { IntroRequestResponse, IntrosResponse, MatchResult, Profile } from '@opm/shared-types';
+import type {
+  IntroRequestResponse,
+  IntrosResponse,
+  MatchResult,
+  PendingVerification,
+  Profile,
+} from '@opm/shared-types';
 
 export function makeProfile(overrides: Partial<Profile> = {}): Profile {
   return {
@@ -13,6 +19,7 @@ export function makeProfile(overrides: Partial<Profile> = {}): Profile {
     industry: 'Fintech',
     skills: ['payments', 'fundraising'],
     status: 'ACTIVE',
+    role: 'MEMBER',
     avatarUrl: null,
     linkedinUrl: 'https://www.linkedin.com/in/anna',
     email: 'anna@example.com',
@@ -52,4 +59,18 @@ export function makeIntro(overrides: Partial<IntroRequestResponse> = {}): IntroR
 export function emptyIntros(overrides: Partial<IntrosResponse> = {}): IntrosResponse {
   const page = { data: [], meta: { total: 0, page: 1, totalPages: 1 } };
   return { sent: page, received: page, pendingIncoming: 0, ...overrides };
+}
+
+export function makeVerification(
+  overrides: Partial<PendingVerification> = {},
+): PendingVerification {
+  return {
+    id: 'v1',
+    fullName: 'Nina Newbie',
+    email: 'nina@example.com',
+    graduationYear: 2019,
+    diplomaNumber: 'DIP-42',
+    createdAt: '2026-03-02T10:00:00.000Z',
+    ...overrides,
+  };
 }

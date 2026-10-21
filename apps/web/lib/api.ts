@@ -1,5 +1,6 @@
 import type {
   CreateIntroDto,
+  DecideVerificationDto,
   IntroRequestResponse,
   IntrosResponse,
   UpdateIntroStatusDto,
@@ -8,6 +9,8 @@ import type {
   Profile,
   RegisterDto,
   RegisterResponse,
+  VerificationDecisionResponse,
+  VerificationsResponse,
 } from '@opm/shared-types';
 import { getSession } from 'next-auth/react';
 import { DEFAULT_API_URL } from '@/constants/api';
@@ -111,6 +114,21 @@ export function updateIntroStatus(
   body: UpdateIntroStatusDto,
 ): Promise<IntroRequestResponse> {
   return request<IntroRequestResponse>(`/intros/${encodeURIComponent(id)}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
+export function fetchVerifications(signal?: AbortSignal): Promise<VerificationsResponse> {
+  return request<VerificationsResponse>('/admin/verifications', undefined, signal);
+}
+
+export function decideVerification(
+  id: string,
+  body: DecideVerificationDto,
+): Promise<VerificationDecisionResponse> {
+  return request<VerificationDecisionResponse>(`/admin/verifications/${encodeURIComponent(id)}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),

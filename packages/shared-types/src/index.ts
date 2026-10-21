@@ -1,11 +1,19 @@
 export type TravelStatus = 'LIVING_IN' | 'TRAVELING_TO';
 
-export type ProfileStatus = 'ACTIVE' | 'PENDING_VERIFICATION';
+export type ProfileStatus = 'ACTIVE' | 'PENDING_VERIFICATION' | 'REJECTED';
 
 export const ProfileStatus = {
   ACTIVE: 'ACTIVE',
   PENDING_VERIFICATION: 'PENDING_VERIFICATION',
+  REJECTED: 'REJECTED',
 } as const satisfies Record<ProfileStatus, ProfileStatus>;
+
+export type Role = 'MEMBER' | 'ADMIN';
+
+export const Role = {
+  MEMBER: 'MEMBER',
+  ADMIN: 'ADMIN',
+} as const satisfies Record<Role, Role>;
 
 export interface Profile {
   id: string;
@@ -20,6 +28,8 @@ export interface Profile {
   skills: string[];
   /** Only ACTIVE (verified) alumni can use matchmaking and request intros. */
   status: ProfileStatus;
+  /** ADMIN unlocks the verification panel (`/admin/*` routes); everyone else is a MEMBER. */
+  role: Role;
   avatarUrl: string | null;
   linkedinUrl: string | null;
   email: string | null;
@@ -144,4 +154,35 @@ export interface RegisterResponse {
   /** Short-lived HS256 bearer token (`sub` = profile id) signed with the shared `AUTH_SECRET`. */
   accessToken: string;
   profile: Profile;
+}
+
+/** An applicant awaiting review. `diplomaNumber` is private and only ever returned to admins. */
+export interface PendingVerification {
+  id: string;
+  fullName: string;
+  email: string | null;
+  graduationYear: number;
+  diplomaNumber: string | null;
+  createdAt: string;
+}
+
+export interface VerificationsResponse {
+  data: PendingVerification[];
+}
+
+export type VerificationDecision = 'APPROVE' | 'REJECT';
+
+export const VerificationDecision = {
+  APPROVE: 'APPROVE',
+  REJECT: 'REJECT',
+} as const satisfies Record<VerificationDecision, VerificationDecision>;
+
+/** The reviewing admin is the authenticated user; it is never part of the payload. */
+export interface DecideVerificationDto {
+  decision: VerificationDecision;
+}
+
+export interface VerificationDecisionResponse {
+  id: string;
+  status: Extract<ProfileStatus, 'ACTIVE' | 'REJECTED'>;
 }
