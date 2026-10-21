@@ -2,7 +2,7 @@ import { getToken } from 'next-auth/jwt';
 import { NextResponse, type NextRequest } from 'next/server';
 import { resolveAuthRedirect } from '@/utils/routes';
 
-/** Runs before every page: signed-out visitors go to /login, signed-in ones skip /login and /register. */
+/** Runs before every page: guests may see the landing page and sign-in pages, signed-in users skip them. */
 export async function middleware(req: NextRequest) {
   const token = await getToken({ req, secret: process.env.AUTH_SECRET });
   const { pathname, search } = req.nextUrl;

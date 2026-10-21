@@ -28,7 +28,7 @@ describe('CredentialsForm', () => {
       password: 's3cret',
       redirect: false,
     });
-    await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/'));
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/matchmaker'));
     expect(router.refresh).toHaveBeenCalled();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
@@ -50,7 +50,7 @@ describe('CredentialsForm', () => {
     signIn.mockResolvedValueOnce(SIGNED_IN);
 
     await submitCredentials(user);
-    await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/'));
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/matchmaker'));
   });
 
   it('shows a generic error and stays on the page when the credentials are rejected', async () => {
@@ -72,7 +72,7 @@ describe('DevQuickLogin', () => {
 
     await user.click(await screen.findByRole('button', { name: /Continue as Anna K/ }));
     expect(signIn).toHaveBeenCalledWith('dev-impersonate', { profileId: 'anna', redirect: false });
-    await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/'));
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith('/matchmaker'));
   });
 
   it('explains when quick login is unavailable on the API', async () => {

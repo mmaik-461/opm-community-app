@@ -1,5 +1,12 @@
 import { expect, test } from '@playwright/test';
-import { API_URL, DEFAULT_USER, E2E_SEED_PASSWORD, PASSWORD_USER } from '../constants';
+import {
+  API_URL,
+  DEFAULT_USER,
+  E2E_SEED_PASSWORD,
+  LOGIN_PATH,
+  MATCHMAKER_PATH,
+  PASSWORD_USER,
+} from '../constants';
 import { fetchProfiles } from '../utils/api';
 import {
   accountMenu,
@@ -13,8 +20,8 @@ import {
 
 test.describe('Authentication', () => {
   test('shows only the sign-in screen to an anonymous visitor', async ({ page }) => {
-    await page.goto('/');
-    await expect(page).toHaveURL('/login');
+    await page.goto(LOGIN_PATH);
+    await expect(page).toHaveURL(LOGIN_PATH);
     await expect(
       page.getByRole('heading', { name: /Sign in to the OPM Community Hub/ }),
     ).toBeVisible();
@@ -41,9 +48,9 @@ test.describe('Authentication', () => {
   test('keeps signed-in users off /login and /register', async ({ page }) => {
     await openApp(page);
     await page.goto('/login');
-    await expect(page).toHaveURL('/');
+    await expect(page).toHaveURL(MATCHMAKER_PATH);
     await page.goto('/register');
-    await expect(page).toHaveURL('/');
+    await expect(page).toHaveURL(MATCHMAKER_PATH);
   });
 
   test('gives every section its own URL, title and working back button', async ({ page }) => {
@@ -63,7 +70,7 @@ test.describe('Authentication', () => {
     await page.goBack();
     await expect(page).toHaveURL('/directory');
     await page.goBack();
-    await expect(page).toHaveURL('/');
+    await expect(page).toHaveURL(MATCHMAKER_PATH);
 
     // A deep link renders the section directly, signed in, after a full load.
     await page.goto('/intros');
@@ -112,7 +119,7 @@ test.describe('Authentication', () => {
   });
 
   test('signs in with email and password, survives a reload, and signs out', async ({ page }) => {
-    await page.goto('/');
+    await page.goto(LOGIN_PATH);
     await page.getByLabel('Email').fill(PASSWORD_USER.email);
     await page.getByLabel('Password').fill('wrong-password');
     await page.getByRole('button', { name: 'Sign in' }).click();
@@ -141,7 +148,7 @@ test.describe('Authentication', () => {
 
   test('quick login lands on the app as the chosen alumnus', async ({ page, request }) => {
     const [first] = await fetchProfiles(request);
-    await page.goto('/');
+    await page.goto(LOGIN_PATH);
     await quickLogin(page, first.fullName);
     await expectSignedInAs(page, first.fullName);
   });

@@ -1,12 +1,12 @@
 import { expect, test } from '@playwright/test';
-import { REGISTRANT } from '../constants';
+import { LOGIN_PATH, REGISTRANT } from '../constants';
 import { accountMenu, expectSignedInAs, signOut } from '../utils/app';
 
 test.describe('Registration and verification', () => {
   test('a new alumnus signs up, lands in the app as pending, and is blocked from matchmaking', async ({
     page,
   }) => {
-    await page.goto('/');
+    await page.goto(LOGIN_PATH);
     await page.getByRole('link', { name: 'Sign up' }).click();
     await expect(page).toHaveURL('/register');
     await page.getByLabel('Full name').fill(REGISTRANT.fullName);
@@ -64,7 +64,7 @@ test.describe('Registration and verification', () => {
   test('the registered credentials sign in again, and a taken email is rejected', async ({
     page,
   }) => {
-    await page.goto('/');
+    await page.goto(LOGIN_PATH);
     await page.getByLabel('Email').fill(REGISTRANT.email);
     await page.getByLabel('Password').fill(REGISTRANT.password);
     await page.getByRole('button', { name: 'Sign in' }).click();
@@ -86,7 +86,7 @@ test.describe('Registration and verification', () => {
   });
 
   test('quick-login alumni are verified and see no banner', async ({ page }) => {
-    await page.goto('/');
+    await page.goto(LOGIN_PATH);
     await page.getByRole('button', { name: /^Continue as Anna Kowalska/ }).click();
     await expect(accountMenu(page)).toBeEnabled();
     await expect(page.getByRole('status')).toHaveCount(0);

@@ -7,6 +7,7 @@ import { Role } from '@opm/shared-types';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { APP_HOME } from '@/constants/routes';
 import { FORBIDDEN_BACK_LABEL, FORBIDDEN_MESSAGE, FORBIDDEN_TITLE } from '@/constants/admin';
 import { AdminTabs } from './admin-tabs';
 import { useUser } from './user-context';
@@ -21,7 +22,7 @@ function Forbidden() {
       <h2 className="text-lg font-semibold tracking-tight">{FORBIDDEN_TITLE}</h2>
       <p className="text-sm text-zinc-600">{FORBIDDEN_MESSAGE}</p>
       <Button asChild variant="outline" size="sm">
-        <Link href="/">{FORBIDDEN_BACK_LABEL}</Link>
+        <Link href={APP_HOME}>{FORBIDDEN_BACK_LABEL}</Link>
       </Button>
     </Card>
   );

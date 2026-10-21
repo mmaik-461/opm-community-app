@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Network } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { ROUTES } from '@/constants/routes';
+import { APP_HOME } from '@/constants/routes';
 import { PrimaryNav } from './primary-nav';
 import { UserMenu } from './user-menu';
 
@@ -17,7 +17,7 @@ export function Header() {
             <Network className="size-5" aria-hidden />
           </div>
           <h1 className="truncate text-sm font-semibold tracking-tight text-zinc-900 sm:text-base">
-            <Link href={ROUTES.home}>OPM Community Hub</Link>
+            <Link href={APP_HOME}>OPM Community Hub</Link>
           </h1>
           <Badge className="hidden bg-zinc-900 text-[10px] font-semibold tracking-wider text-white uppercase xl:inline-flex">
             Executive

@@ -14,6 +14,9 @@ export const SEARCH_DEBOUNCE_MS = 250;
 export const MAX_LAYOUT_SHIFT = 0.001;
 export const MIN_DIRECTORY_GRID_HEIGHT_PX = 576;
 
+export const LOGIN_PATH = '/login';
+export const MATCHMAKER_PATH = '/matchmaker';
+
 export const MATCH_COUNT = 3;
 
 /** Isolated-run auth config; the secret is shared by the API (verifies) and web (signs). */

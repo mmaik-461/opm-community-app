@@ -127,7 +127,7 @@ describe('Sign up', () => {
     await submit(user);
 
     expect(await screen.findByRole('button', { name: 'Create account' })).toBeEnabled();
-    expect(router.replace).toHaveBeenCalledWith('/');
+    expect(router.replace).toHaveBeenCalledWith('/matchmaker');
     expect(api.calls).toHaveLength(1);
     expect(api.calls[0]).toMatchObject({
       method: 'POST',

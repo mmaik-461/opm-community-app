@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { ADMIN_USER, APPLICANT, DEFAULT_USER } from '../constants';
+import { ADMIN_USER, APPLICANT, DEFAULT_USER, LOGIN_PATH } from '../constants';
 import { fetchProfiles } from '../utils/api';
 import { actAs, expectSignedInAs, openApp, openSection } from '../utils/app';
 import { stubMatchmaking } from '../utils/matchmaking-stub';
@@ -19,7 +19,7 @@ test.describe('Admin verification panel', () => {
     request,
   }) => {
     // 1. Register: the new alumnus lands in the app as pending.
-    await page.goto('/');
+    await page.goto(LOGIN_PATH);
     await page.getByRole('link', { name: 'Sign up' }).click();
     await page.getByLabel('Full name').fill(APPLICANT.fullName);
     await page.getByLabel('Email').fill(APPLICANT.email);

@@ -1,5 +1,5 @@
 import { expect, type Page } from '@playwright/test';
-import { DEFAULT_USER } from '../constants';
+import { DEFAULT_USER, LOGIN_PATH, MATCHMAKER_PATH } from '../constants';
 
 export type AppSection =
   'AI Matchmaker' | 'Alumni Directory' | 'My Intros' | 'Verifications' | 'Feedback Analytics';
@@ -14,7 +14,7 @@ export async function quickLogin(page: Page, fullName: string) {
  * The session is a cookie, so a revisit within the same test is already signed in.
  */
 export async function openApp(page: Page, signInAs: string = DEFAULT_USER) {
-  await page.goto('/');
+  await page.goto(LOGIN_PATH);
   const menu = accountMenu(page);
   const signIn = page.getByRole('button', { name: new RegExp(`^Continue as ${signInAs}`) });
   await expect(menu.or(signIn)).toBeVisible();
@@ -24,7 +24,7 @@ export async function openApp(page: Page, signInAs: string = DEFAULT_USER) {
 }
 
 const SECTION_PATH: Record<AppSection, string> = {
-  'AI Matchmaker': '/',
+  'AI Matchmaker': MATCHMAKER_PATH,
   'Alumni Directory': '/directory',
   'My Intros': '/intros',
   Verifications: '/admin',

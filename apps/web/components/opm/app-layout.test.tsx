@@ -102,7 +102,7 @@ describe('primary navigation', () => {
     renderLayout();
 
     for (const [name, href] of [
-      [/ai matchmaker/i, '/'],
+      [/ai matchmaker/i, '/matchmaker'],
       [/alumni directory/i, '/directory'],
       [/my intros/i, '/intros'],
     ] as const) {
