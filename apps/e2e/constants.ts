@@ -32,7 +32,7 @@ export const PASSWORD_USER = {
 export const REGISTRANT = {
   fullName: 'Zoe Registrant',
   email: 'zoe.registrant@example.com',
-  password: 'e2e-registration-password',
+  password: 'E2e-Registration-Pass1!',
   city: 'Prague',
   industry: 'Fintech',
   graduationYear: '2019',
@@ -46,7 +46,7 @@ export const ADMIN_USER = 'Community Admin';
 export const APPLICANT = {
   fullName: 'Nadia Applicant',
   email: 'nadia.applicant@example.com',
-  password: 'e2e-applicant-password',
+  password: 'E2e-Applicant-Pass1!',
   city: 'Vienna',
   industry: 'HealthTech',
   graduationYear: '2017',

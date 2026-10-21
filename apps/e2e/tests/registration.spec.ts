@@ -11,17 +11,40 @@ test.describe('Registration and verification', () => {
     await page.getByRole('tab', { name: 'Sign up' }).click();
     await page.getByLabel('Full name').fill(REGISTRANT.fullName);
     await page.getByLabel('Email').fill(REGISTRANT.email);
-    await page.getByLabel('Password').fill('short');
+    const password = page.getByLabel('Password', { exact: true });
+    const confirm = page.getByLabel('Confirm password', { exact: true });
     await page.getByLabel('City').fill(REGISTRANT.city);
     await page.getByLabel('Industry').fill(REGISTRANT.industry);
     await page.getByLabel('Graduation year').fill(REGISTRANT.graduationYear);
     await page.getByLabel('Diploma ID (optional)').fill(REGISTRANT.diplomaNumber);
 
-    // The browser enforces the password length before anything reaches the API.
+    // A weak password ticks only the rules it meets and is blocked before reaching the API.
+    const metRules = page
+      .getByRole('list', { name: 'Password requirements' })
+      .getByRole('listitem')
+      .filter({ hasText: '(met)' });
+    await password.fill('weakpass');
+    await expect(metRules).toHaveCount(2);
+    await confirm.fill('weakpass');
+    await page.getByRole('button', { name: 'Create account' }).click();
+    await expect(
+      page.getByRole('alert').filter({ hasText: 'meets every requirement' }),
+    ).toBeVisible();
+    await expect(page.getByRole('button', { name: SWITCHER })).toHaveCount(0);
+
+    // A strong password satisfies every rule, but a mismatching confirmation still blocks sign-up.
+    await password.fill(REGISTRANT.password);
+    await expect(metRules).toHaveCount(5);
+    await confirm.fill(`${REGISTRANT.password}x`);
+    await expect(page.getByText('Passwords do not match.')).toBeVisible();
     await page.getByRole('button', { name: 'Create account' }).click();
     await expect(page.getByRole('button', { name: SWITCHER })).toHaveCount(0);
 
-    await page.getByLabel('Password').fill(REGISTRANT.password);
+    // The eye toggle reveals what was typed.
+    await page.getByRole('button', { name: 'Show password', exact: true }).click();
+    await expect(password).toHaveAttribute('type', 'text');
+
+    await confirm.fill(REGISTRANT.password);
     await page.getByRole('button', { name: 'Create account' }).click();
 
     await expect(page.getByRole('button', { name: SWITCHER })).toContainText(REGISTRANT.fullName);
@@ -51,7 +74,8 @@ test.describe('Registration and verification', () => {
     await page.getByRole('tab', { name: 'Sign up' }).click();
     await page.getByLabel('Full name').fill('Someone Else');
     await page.getByLabel('Email').fill(REGISTRANT.email);
-    await page.getByLabel('Password').fill(REGISTRANT.password);
+    await page.getByLabel('Password', { exact: true }).fill(REGISTRANT.password);
+    await page.getByLabel('Confirm password', { exact: true }).fill(REGISTRANT.password);
     await page.getByLabel('City').fill(REGISTRANT.city);
     await page.getByLabel('Industry').fill(REGISTRANT.industry);
     await page.getByLabel('Graduation year').fill(REGISTRANT.graduationYear);

@@ -5,7 +5,7 @@ import { buildQueryString, isAbortError } from './api';
 import { errorMessage } from './errors';
 import { formatDate, toPercent } from './format';
 import { firstName, initials, matchesSearch, travelLabel, uniqueValues } from './profile';
-import { buildRegisterPayload, currentYear } from './register';
+import { buildRegisterPayload, checkPassword, currentYear, passwordError } from './register';
 import { buildMailto, safeHttpUrl } from './url';
 
 describe('api utils', () => {
@@ -129,6 +129,7 @@ describe('register utils', () => {
     fullName: ' Nina Novak ',
     email: ' nina@example.com ',
     password: ' keep spaces ',
+    confirmPassword: ' keep spaces ',
     city: ' Prague ',
     industry: ' Fintech ',
     graduationYear: '2019',
@@ -154,5 +155,25 @@ describe('register utils', () => {
 
   it('reads the current year from the given date', () => {
     expect(currentYear(new Date('2031-06-01T00:00:00Z'))).toBe(2031);
+  });
+});
+
+describe('password utils', () => {
+  const metIds = (password: string) =>
+    checkPassword(password)
+      .filter((c) => c.met)
+      .map((c) => c.id);
+
+  it('reports which rules a password satisfies', () => {
+    expect(metIds('')).toEqual([]);
+    expect(metIds('abc')).toEqual(['lowercase']);
+    expect(metIds('Abcdef1!')).toEqual(['length', 'uppercase', 'lowercase', 'number', 'special']);
+    expect(metIds('Abcdef1 ')).not.toContain('special');
+  });
+
+  it('flags weak passwords before mismatches, and accepts a matching strong one', () => {
+    expect(passwordError('weak', 'weak')).toMatch(/meets every requirement/);
+    expect(passwordError('Str0ng!Pass', 'Str0ng!Pasz')).toBe('Passwords do not match.');
+    expect(passwordError('Str0ng!Pass', 'Str0ng!Pass')).toBeNull();
   });
 });

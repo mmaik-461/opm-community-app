@@ -11,7 +11,6 @@ export const ACCESS_TOKEN_TTL_SECONDS = 5 * 60;
 
 export const IS_PUBLIC_KEY = 'isPublic';
 
-export const PASSWORD_MIN_LENGTH = 8;
 export const PASSWORD_MAX_LENGTH = 200;
 export const SCRYPT_KEY_LENGTH = 64;
 export const SCRYPT_SALT_BYTES = 16;

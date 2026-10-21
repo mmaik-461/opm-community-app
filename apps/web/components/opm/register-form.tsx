@@ -9,21 +9,32 @@ import {
   DIPLOMA_NUMBER_HINT,
   EMPTY_REGISTER_VALUES,
   GRADUATION_YEAR_MIN,
-  PASSWORD_MIN_LENGTH,
-  SIGN_UP_PASSWORD_HINT,
+  PASSWORD_MISMATCH_MESSAGE,
   SIGN_UP_SIGN_IN_FAILED_MESSAGE,
   SIGN_UP_SUBMIT_LABEL,
 } from '@/constants/auth';
 import { PRIMARY_BUTTON_CLASS } from '@/constants/ui';
 import { registerAlumnus } from '@/lib/api';
 import { errorMessage } from '@/utils/errors';
-import { buildRegisterPayload, currentYear, type RegisterFormValues } from '@/utils/register';
+import {
+  buildRegisterPayload,
+  currentYear,
+  passwordError,
+  passwordsMatch,
+  type RegisterFormValues,
+} from '@/utils/register';
 import { FormField } from './form-field';
+import { PasswordChecklist } from './password-checklist';
+import { PasswordField } from './password-field';
 
 export function RegisterForm() {
   const [values, setValues] = React.useState<RegisterFormValues>(EMPTY_REGISTER_VALUES);
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [attempted, setAttempted] = React.useState(false);
+  const passwordIssue = attempted ? passwordError(values.password, values.confirmPassword) : null;
+  const mismatch =
+    values.confirmPassword !== '' && !passwordsMatch(values.password, values.confirmPassword);
 
   const bind = (key: keyof RegisterFormValues) => ({
     value: values[key],
@@ -33,6 +44,8 @@ export function RegisterForm() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    setAttempted(true);
+    if (passwordError(values.password, values.confirmPassword)) return;
     setSubmitting(true);
     setError(null);
     try {
@@ -67,15 +80,25 @@ export function RegisterForm() {
         required
         {...bind('email')}
       />
-      <FormField
+      <PasswordField
         id="sign-up-password"
         label="Password"
-        type="password"
+        toggleSubject="password"
         autoComplete="new-password"
-        minLength={PASSWORD_MIN_LENGTH}
-        hint={SIGN_UP_PASSWORD_HINT}
+        aria-describedby="sign-up-password-rules"
         required
         {...bind('password')}
+      >
+        <PasswordChecklist id="sign-up-password-rules" password={values.password} />
+      </PasswordField>
+      <PasswordField
+        id="sign-up-confirm-password"
+        label="Confirm password"
+        toggleSubject="confirm password"
+        autoComplete="new-password"
+        error={mismatch ? PASSWORD_MISMATCH_MESSAGE : null}
+        required
+        {...bind('confirmPassword')}
       />
       <FormField id="sign-up-city" label="City" required {...bind('city')} />
       <FormField id="sign-up-industry" label="Industry" required {...bind('industry')} />
@@ -95,6 +118,11 @@ export function RegisterForm() {
         hint={DIPLOMA_NUMBER_HINT}
         {...bind('diplomaNumber')}
       />
+      {passwordIssue && !mismatch && (
+        <p role="alert" className="text-sm text-red-700">
+          {passwordIssue}
+        </p>
+      )}
       {error && (
         <p role="alert" className="text-sm text-red-700">
           {error}

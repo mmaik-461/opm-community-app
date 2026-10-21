@@ -25,7 +25,8 @@ test.describe('Admin verification panel', () => {
     await page.getByRole('tab', { name: 'Sign up' }).click();
     await page.getByLabel('Full name').fill(APPLICANT.fullName);
     await page.getByLabel('Email').fill(APPLICANT.email);
-    await page.getByLabel('Password').fill(APPLICANT.password);
+    await page.getByLabel('Password', { exact: true }).fill(APPLICANT.password);
+    await page.getByLabel('Confirm password', { exact: true }).fill(APPLICANT.password);
     await page.getByLabel('City').fill(APPLICANT.city);
     await page.getByLabel('Industry').fill(APPLICANT.industry);
     await page.getByLabel('Graduation year').fill(APPLICANT.graduationYear);

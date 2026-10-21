@@ -186,3 +186,36 @@ export interface VerificationDecisionResponse {
   id: string;
   status: Extract<ProfileStatus, 'ACTIVE' | 'REJECTED'>;
 }
+
+export const PASSWORD_MIN_LENGTH = 8;
+
+export type PasswordRuleId = 'length' | 'uppercase' | 'lowercase' | 'number' | 'special';
+
+export interface PasswordRule {
+  id: PasswordRuleId;
+  /** Shown in the web checklist and used as the API's validation message. */
+  label: string;
+  test: (password: string) => boolean;
+}
+
+/** Single source of truth for password strength, shared by the API schema and the sign-up form. */
+export const PASSWORD_RULES: readonly PasswordRule[] = [
+  {
+    id: 'length',
+    label: `At least ${PASSWORD_MIN_LENGTH} characters`,
+    test: (p) => p.length >= PASSWORD_MIN_LENGTH,
+  },
+  { id: 'uppercase', label: 'One uppercase letter (A-Z)', test: (p) => /[A-Z]/.test(p) },
+  { id: 'lowercase', label: 'One lowercase letter (a-z)', test: (p) => /[a-z]/.test(p) },
+  { id: 'number', label: 'One number (0-9)', test: (p) => /[0-9]/.test(p) },
+  {
+    id: 'special',
+    label: 'One special character (e.g. !@#$%^&*)',
+    test: (p) => /[^A-Za-z0-9\s]/.test(p),
+  },
+];
+
+/** Labels of the rules the password fails; empty when it is strong enough. */
+export function failedPasswordRules(password: string): string[] {
+  return PASSWORD_RULES.filter((rule) => !rule.test(password)).map((rule) => rule.label);
+}

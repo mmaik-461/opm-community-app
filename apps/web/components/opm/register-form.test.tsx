@@ -7,6 +7,7 @@ import { signIn } from '@/test/next-auth';
 import { SignIn } from './sign-in';
 
 const SIGN_IN_OK = { ok: true, error: undefined, status: 200, url: null };
+const STRONG = 'Str0ng!Passw0rd';
 const created = { accessToken: 'api-token', profile: makeProfile({ id: 'new' }) };
 
 async function openSignUp(user: ReturnType<typeof userEvent.setup>) {
@@ -17,7 +18,8 @@ async function openSignUp(user: ReturnType<typeof userEvent.setup>) {
 async function fillRequired(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText('Full name'), '  Nina Novak ');
   await user.type(screen.getByLabelText('Email'), 'nina@example.com');
-  await user.type(screen.getByLabelText('Password'), 'a-long-password');
+  await user.type(screen.getByLabelText('Password'), STRONG);
+  await user.type(screen.getByLabelText('Confirm password'), STRONG);
   await user.type(screen.getByLabelText('City'), 'Prague');
   await user.type(screen.getByLabelText('Industry'), 'Fintech');
   await user.type(screen.getByLabelText('Graduation year'), '2019');
@@ -25,6 +27,88 @@ async function fillRequired(user: ReturnType<typeof userEvent.setup>) {
 
 const submit = (user: ReturnType<typeof userEvent.setup>) =>
   user.click(screen.getByRole('button', { name: 'Create account' }));
+
+describe('Sign up password', () => {
+  it('ticks each requirement as the typed password satisfies it', async () => {
+    const user = userEvent.setup();
+    await openSignUp(user);
+    const password = screen.getByLabelText('Password');
+    const met = () =>
+      screen
+        .getAllByRole('listitem')
+        .filter((li) => li.textContent?.endsWith('(met)'))
+        .map((li) => li.textContent);
+
+    expect(met()).toEqual([]);
+    await user.type(password, 'abcdefgh');
+    expect(met()).toEqual(['At least 8 characters(met)', 'One lowercase letter (a-z)(met)']);
+    await user.type(password, 'A');
+    expect(met()).toContain('One uppercase letter (A-Z)(met)');
+    await user.type(password, '1');
+    expect(met()).toContain('One number (0-9)(met)');
+    await user.type(password, '!');
+    expect(met()).toHaveLength(5);
+    await user.clear(password);
+    expect(met()).toEqual([]);
+  });
+
+  it('blocks submission and flags a mismatching confirmation', async () => {
+    const user = userEvent.setup();
+    const api = stubApi({ 'POST /auth/register': created });
+    await openSignUp(user);
+    await fillRequired(user);
+    await user.clear(screen.getByLabelText('Confirm password'));
+    await user.type(screen.getByLabelText('Confirm password'), 'Different1!');
+
+    expect(screen.getByText('Passwords do not match.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Confirm password')).toBeInvalid();
+    await submit(user);
+    expect(api.calls).toHaveLength(0);
+    expect(signIn).not.toHaveBeenCalled();
+  });
+
+  it('blocks submission of a password that misses a requirement', async () => {
+    const user = userEvent.setup();
+    const api = stubApi({ 'POST /auth/register': created });
+    await openSignUp(user);
+    await fillRequired(user);
+    for (const label of ['Password', 'Confirm password']) {
+      await user.clear(screen.getByLabelText(label));
+      await user.type(screen.getByLabelText(label), 'weakpassword');
+    }
+    await submit(user);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/meets every requirement/);
+    expect(api.calls).toHaveLength(0);
+  });
+
+  it.each([
+    ['Password', 'password'],
+    ['Confirm password', 'confirm password'],
+  ])('toggles the %s field between hidden and visible', async (label, subject) => {
+    const user = userEvent.setup();
+    await openSignUp(user);
+    const input = screen.getByLabelText(label);
+    expect(input).toHaveAttribute('type', 'password');
+
+    await user.click(screen.getByRole('button', { name: `Show ${subject}` }));
+    expect(input).toHaveAttribute('type', 'text');
+    expect(screen.getByRole('button', { name: `Hide ${subject}` })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+
+    await user.click(screen.getByRole('button', { name: `Hide ${subject}` }));
+    expect(input).toHaveAttribute('type', 'password');
+  });
+
+  it('toggles each field independently', async () => {
+    const user = userEvent.setup();
+    await openSignUp(user);
+    await user.click(screen.getByRole('button', { name: 'Show password' }));
+    expect(screen.getByLabelText('Confirm password')).toHaveAttribute('type', 'password');
+  });
+});
 
 describe('Sign up', () => {
   it('shows Sign in by default and switches to the registration form', async () => {
@@ -56,7 +140,7 @@ describe('Sign up', () => {
       body: {
         fullName: 'Nina Novak',
         email: 'nina@example.com',
-        password: 'a-long-password',
+        password: 'Str0ng!Passw0rd',
         city: 'Prague',
         industry: 'Fintech',
         graduationYear: 2019,
@@ -65,7 +149,7 @@ describe('Sign up', () => {
     });
     expect(signIn).toHaveBeenCalledWith('credentials', {
       email: 'nina@example.com',
-      password: 'a-long-password',
+      password: 'Str0ng!Passw0rd',
       redirect: false,
     });
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();

@@ -28,7 +28,7 @@ const EMBEDDING = [0.5, 0.25];
 
 const registration = (overrides: Partial<RegisterDto> = {}): RegisterDto => ({
   email: 'New.Person@Example.com',
-  password: 'a-long-enough-password',
+  password: 'Str0ng!Passw0rd',
   fullName: 'New Person',
   city: 'Lisbon',
   industry: 'Fintech',
@@ -144,7 +144,7 @@ describe('Auth API (controller + service + guard over HTTP)', () => {
 
       const row = await stored('new.person@example.com');
       expect(row.diplomaNumber).toBe('D-123');
-      expect(await verifyPassword('a-long-enough-password', row.passwordHash as string)).toBe(true);
+      expect(await verifyPassword('Str0ng!Passw0rd', row.passwordHash as string)).toBe(true);
       expect(db.embeddings.get(profile.id)).toBe('[0.5,0.25]');
     });
 
@@ -189,6 +189,9 @@ describe('Auth API (controller + service + guard over HTTP)', () => {
       const invalid: object[] = [
         registration({ email: 'not-an-email' }),
         registration({ password: 'short' }),
+        registration({ password: 'str0ng!passw0rd' }),
+        registration({ password: 'Strong!Password' }),
+        registration({ password: 'Str0ngPassw0rd' }),
         registration({ fullName: '   ' }),
         registration({ city: '' }),
         registration({ industry: undefined }),
@@ -203,6 +206,33 @@ describe('Auth API (controller + service + guard over HTTP)', () => {
       expect(await stored('not-an-email')).toBeNull();
     });
 
+    it.each([
+      ['uppercase letter', 'str0ng!passw0rd', 'One uppercase letter (A-Z)'],
+      ['lowercase letter', 'STR0NG!PASSW0RD', 'One lowercase letter (a-z)'],
+      ['number', 'Strong!Password', 'One number (0-9)'],
+      ['special character', 'Str0ngPassw0rd', 'One special character (e.g. !@#$%^&*)'],
+      ['minimum length', 'Sh0rt!', 'At least 8 characters'],
+    ])(
+      'names the failed criterion when the password lacks a %s',
+      async (_name, password, label) => {
+        const res = await register(registration({ email: 'weak@example.com', password })).expect(
+          400,
+        );
+        expect((res.body as { message: string[] }).message).toEqual([`password: ${label}`]);
+        expect(await stored('weak@example.com')).toBeNull();
+      },
+    );
+
+    it('lists every failed criterion at once', async () => {
+      const res = await register(registration({ password: 'abc' })).expect(400);
+      expect((res.body as { message: string[] }).message).toEqual([
+        'password: At least 8 characters',
+        'password: One uppercase letter (A-Z)',
+        'password: One number (0-9)',
+        'password: One special character (e.g. !@#$%^&*)',
+      ]);
+    });
+
     it('saves nothing when the embedding service fails', async () => {
       sdk.embeddingsCreate.mockRejectedValue(new Error('boom'));
       vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
@@ -214,7 +244,7 @@ describe('Auth API (controller + service + guard over HTTP)', () => {
       await register(registration({ email: 'login@example.com' })).expect(201);
       const res = await http
         .post('/auth/login')
-        .send({ email: 'login@example.com', password: 'a-long-enough-password' });
+        .send({ email: 'login@example.com', password: 'Str0ng!Passw0rd' });
       expect(res.status).toBe(200);
       expect((res.body as LoginResponse).profile.status).toBe('PENDING_VERIFICATION');
     });
