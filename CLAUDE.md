@@ -18,7 +18,7 @@ Production-grade platform for the OPM alumni community: "Ask Community + AI Matc
 
 ## Environment Variables (auth)
 
-- `AUTH_SECRET` (≥ 32 chars; identical in `apps/api` and `apps/web`), `NEXTAUTH_URL` (web, production), `AUTH_DEV_LOGIN` (api) / `NEXT_PUBLIC_AUTH_DEV_LOGIN` (web), `AUTH_AUTO_VERIFY` (api, optional), `SEED_PASSWORD` (seed only), `API_URL` (optional web server-side API origin). See `.env.example` and the README "Authentication" section.
+- `AUTH_SECRET` (≥ 32 chars; identical in `apps/api` and `apps/web`), `NEXTAUTH_URL` (web, production), `AUTH_DEV_LOGIN` (api) / `NEXT_PUBLIC_AUTH_DEV_LOGIN` (web), `AUTH_AUTO_VERIFY` (api, optional), `SEED_PASSWORD` (seed only), `API_URL` (optional web server-side API origin). See `.env.example` and `docs/authentication.md`.
 
 ## Key Development Commands
 
@@ -80,7 +80,7 @@ Always execute commands using pnpm filters from the monorepo root:
 
 - **Tests are part of the change.** Every new feature or bugfix MUST ship with the matching tests: unit tests for pure logic (`utils/`, schemas), integration tests for API behaviour (controller + service over HTTP), component tests for non-trivial UI logic, and an e2e journey when a user-facing flow changes.
 - **Definition of done.** Before declaring any task complete, ALL tests (`pnpm test`, plus `pnpm test:e2e` for user-facing changes) and ALL builds (`pnpm build`) MUST pass cleanly, together with `pnpm lint` and `pnpm format:check`. Report failures honestly; never skip, `.skip` or delete a failing test to get green.
-- **README is a deliverable.** On every functional change, review `README.md`. If API routes, CLI commands, architecture, test setup or features change, `README.md` MUST be updated within the same task.
+- **README is a deliverable.** On every functional change, review `README.md` and `docs/`. If API routes, CLI commands, architecture, test setup or features change, `README.md` (and the matching file in `docs/`) MUST be updated within the same task.
 - **Test real contracts, not mocks.** Assert observable behaviour (status codes, persisted state, rendered output, request payloads, SQL predicates and bound parameters), not a single hard-coded return value stubbed to make an assertion pass. Mock only true external boundaries (OpenAI/Anthropic SDKs, `fetch`, the browser network) and keep those fakes behaviour-faithful (see `apps/api/src/test/fake-prisma.ts`).
 - **Layout and tooling.**
   - API: Vitest + SWC (decorator metadata) + Supertest; specs live next to the code as `*.spec.ts`; shared fixtures/fakes in `apps/api/src/test/`. Endpoint specs register the real `AuthGuard` and call with signed tokens (`bearer(userId)` from `src/test/auth.ts`).
