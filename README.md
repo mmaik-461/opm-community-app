@@ -22,28 +22,51 @@ The platform is intentionally focused on introductions: the conversation itself 
 
 Prerequisites: Node 20+, pnpm, Docker.
 
+### Environment setup
+
+Each app has its own template with safe local defaults (database URL, `AUTH_SECRET`, `NEXTAUTH_URL`). Copy them once:
+
+```bash
+# macOS / Linux (bash, zsh)
+cp apps/api/.env.example apps/api/.env
+cp apps/web/.env.example apps/web/.env.local
+```
+
+```powershell
+# Windows (PowerShell)
+Copy-Item apps/api/.env.example apps/api/.env
+Copy-Item apps/web/.env.example apps/web/.env.local
+```
+
+Then edit `apps/api/.env`: set `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` (matchmaking and embeddings need them). Everything else works as is.
+
+> **Note:** `AUTH_SECRET` must be identical across both web and api for JWT signature verification to succeed. The two templates ship with the same local development value (at least 32 characters). Change it in both files, and before any production use.
+
+| Variable            | File                  | Purpose                                                              |
+| ------------------- | --------------------- | -------------------------------------------------------------------- |
+| `DATABASE_URL`      | `apps/api/.env`       | Postgres connection (matches `docker-compose.yml`, port `5438`).     |
+| `AUTH_SECRET`       | both                  | Signs and verifies the access token and the session cookie.          |
+| `NEXTAUTH_URL`      | `apps/web/.env.local` | Public origin of the web app (`http://localhost:3000`).              |
+| `ANTHROPIC_API_KEY` | `apps/api/.env`       | Required for matchmaking. `ANTHROPIC_MODEL` optionally overrides it. |
+| `OPENAI_API_KEY`    | `apps/api/.env`       | Required for embeddings (also used by the seed when present).        |
+| `SEED_PASSWORD`     | `apps/api/.env`       | Optional: enables email/password sign-in for seeded alumni.          |
+
+The app reads only `AUTH_SECRET` (there is no separate `NEXTAUTH_SECRET`). The root `.env.example` lists every variable, including the optional flags. See [docs/authentication.md](docs/authentication.md).
+
+### Run
+
 ```bash
 pnpm install
 
 # 1. Database (Postgres 16 + pgvector on localhost:5438)
 docker compose up -d
 
-# 2. Environment: apps/api/.env
-#    DATABASE_URL="postgresql://postgres:postgrespassword@localhost:5438/opm_community?schema=public"
-#    ANTHROPIC_API_KEY=...      (required for matchmaking)
-#    OPENAI_API_KEY=...         (required for query embeddings; used by the seed when present)
-#    PORT=4000
-#    ANTHROPIC_MODEL=...        (optional override)
-#    AUTH_SECRET=...            (required, >= 32 chars; the SAME value in apps/web/.env.local)
-#    SEED_PASSWORD=...          (optional: enables email/password sign-in for seeded alumni)
-#    apps/web/.env.local: AUTH_SECRET=..., NEXTAUTH_URL=http://localhost:3000
-
-# 3. Schema and data
+# 2. Schema and data
 pnpm --filter api prisma generate
 pnpm --filter api prisma migrate dev
 pnpm --filter api prisma db seed   # 25 alumni profiles with precomputed embeddings
 
-# 4. Run everything
+# 3. Run everything
 pnpm dev                           # web on :3000, API on :4000
 ```
 
